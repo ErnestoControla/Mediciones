@@ -96,10 +96,7 @@ class AnalisisCople(models.Model):
     ]
     
     TIPO_ANALISIS_CHOICES = [
-        ('completo', 'Análisis Completo'),
-        ('clasificacion', 'Solo Clasificación'),
-        ('deteccion_piezas', 'Solo Detección de Piezas'),
-        ('deteccion_defectos', 'Solo Detección de Defectos'),
+        ('segmentacion_completa', 'Segmentación Completa (Defectos + Piezas)'),
         ('segmentacion_defectos', 'Solo Segmentación de Defectos'),
         ('segmentacion_piezas', 'Solo Segmentación de Piezas'),
     ]
@@ -128,7 +125,7 @@ class AnalisisCople(models.Model):
         _("Tipo de análisis"),
         max_length=30,
         choices=TIPO_ANALISIS_CHOICES,
-        default='completo'
+        default='segmentacion_completa'
     )
     
     estado = models.CharField(
@@ -178,11 +175,16 @@ class AnalisisCople(models.Model):
     
     # Tiempos de procesamiento (en milisegundos)
     tiempo_captura_ms = models.FloatField(_("Tiempo de captura (ms)"))
-    tiempo_clasificacion_ms = models.FloatField(_("Tiempo de clasificación (ms)"))
-    tiempo_deteccion_piezas_ms = models.FloatField(_("Tiempo de detección piezas (ms)"))
-    tiempo_deteccion_defectos_ms = models.FloatField(_("Tiempo de detección defectos (ms)"))
-    tiempo_segmentacion_defectos_ms = models.FloatField(_("Tiempo de segmentación defectos (ms)"))
-    tiempo_segmentacion_piezas_ms = models.FloatField(_("Tiempo de segmentación piezas (ms)"))
+    tiempo_segmentacion_defectos_ms = models.FloatField(
+        _("Tiempo de segmentación defectos (ms)"), 
+        null=True, 
+        blank=True
+    )
+    tiempo_segmentacion_piezas_ms = models.FloatField(
+        _("Tiempo de segmentación piezas (ms)"), 
+        null=True, 
+        blank=True
+    )
     tiempo_total_ms = models.FloatField(_("Tiempo total (ms)"))
     
     # Metadatos JSON completos
@@ -214,11 +216,8 @@ class AnalisisCople(models.Model):
         return f"Análisis {self.id_analisis} - {self.get_estado_display()}"
 
 
-# Importar modelos de resultados
+# Importar modelos de resultados de segmentación
 from .resultados_models import (
-    ResultadoClasificacion,
-    DeteccionPieza,
-    DeteccionDefecto,
     SegmentacionDefecto,
     SegmentacionPieza,
     EstadisticasSistema

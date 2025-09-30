@@ -1,132 +1,13 @@
 # analisis_coples/resultados_models.py
+"""
+Modelos para almacenar resultados de segmentación de coples.
+Solo maneja segmentación de defectos y piezas.
+"""
 
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 from django.core.validators import MinValueValidator, MaxValueValidator
 from .models import AnalisisCople
-
-
-class ResultadoClasificacion(models.Model):
-    """Resultado de clasificación de un cople"""
-    
-    analisis = models.OneToOneField(
-        AnalisisCople,
-        on_delete=models.CASCADE,
-        related_name="resultado_clasificacion",
-        verbose_name=_("Análisis")
-    )
-    
-    clase_predicha = models.CharField(
-        _("Clase predicha"),
-        max_length=50,
-        help_text="Clase predicha por el modelo (Aceptado/Rechazado)"
-    )
-    
-    confianza = models.FloatField(
-        _("Confianza"),
-        validators=[MinValueValidator(0.0), MaxValueValidator(1.0)],
-        help_text="Nivel de confianza de la predicción (0.0 - 1.0)"
-    )
-    
-    tiempo_inferencia_ms = models.FloatField(
-        _("Tiempo de inferencia (ms)"),
-        help_text="Tiempo que tardó la inferencia en milisegundos"
-    )
-    
-    class Meta:
-        verbose_name = _("Resultado de Clasificación")
-        verbose_name_plural = _("Resultados de Clasificación")
-    
-    def __str__(self):
-        return f"{self.clase_predicha} ({self.confianza:.2%})"
-
-
-class DeteccionPieza(models.Model):
-    """Detección individual de una pieza"""
-    
-    analisis = models.ForeignKey(
-        AnalisisCople,
-        on_delete=models.CASCADE,
-        related_name="detecciones_piezas",
-        verbose_name=_("Análisis")
-    )
-    
-    clase = models.CharField(
-        _("Clase"),
-        max_length=50,
-        help_text="Clase de la pieza detectada"
-    )
-    
-    confianza = models.FloatField(
-        _("Confianza"),
-        validators=[MinValueValidator(0.0), MaxValueValidator(1.0)],
-        help_text="Confianza de la detección (0.0 - 1.0)"
-    )
-    
-    # Coordenadas del bounding box
-    bbox_x1 = models.IntegerField(_("BBox X1"))
-    bbox_y1 = models.IntegerField(_("BBox Y1"))
-    bbox_x2 = models.IntegerField(_("BBox X2"))
-    bbox_y2 = models.IntegerField(_("BBox Y2"))
-    
-    # Centroide
-    centroide_x = models.IntegerField(_("Centroide X"))
-    centroide_y = models.IntegerField(_("Centroide Y"))
-    
-    # Área
-    area = models.IntegerField(_("Área"), help_text="Área en píxeles")
-    
-    class Meta:
-        verbose_name = _("Detección de Pieza")
-        verbose_name_plural = _("Detecciones de Piezas")
-        ordering = ['-confianza']
-    
-    def __str__(self):
-        return f"{self.clase} ({self.confianza:.2%})"
-
-
-class DeteccionDefecto(models.Model):
-    """Detección individual de un defecto"""
-    
-    analisis = models.ForeignKey(
-        AnalisisCople,
-        on_delete=models.CASCADE,
-        related_name="detecciones_defectos",
-        verbose_name=_("Análisis")
-    )
-    
-    clase = models.CharField(
-        _("Clase"),
-        max_length=50,
-        help_text="Clase del defecto detectado"
-    )
-    
-    confianza = models.FloatField(
-        _("Confianza"),
-        validators=[MinValueValidator(0.0), MaxValueValidator(1.0)],
-        help_text="Confianza de la detección (0.0 - 1.0)"
-    )
-    
-    # Coordenadas del bounding box
-    bbox_x1 = models.IntegerField(_("BBox X1"))
-    bbox_y1 = models.IntegerField(_("BBox Y1"))
-    bbox_x2 = models.IntegerField(_("BBox X2"))
-    bbox_y2 = models.IntegerField(_("BBox Y2"))
-    
-    # Centroide
-    centroide_x = models.IntegerField(_("Centroide X"))
-    centroide_y = models.IntegerField(_("Centroide Y"))
-    
-    # Área
-    area = models.IntegerField(_("Área"), help_text="Área en píxeles")
-    
-    class Meta:
-        verbose_name = _("Detección de Defecto")
-        verbose_name_plural = _("Detecciones de Defectos")
-        ordering = ['-confianza']
-    
-    def __str__(self):
-        return f"{self.clase} ({self.confianza:.2%})"
 
 
 class SegmentacionDefecto(models.Model):
@@ -261,17 +142,17 @@ class EstadisticasSistema(models.Model):
         help_text="Número de análisis que fallaron"
     )
     
-    # Estadísticas de clasificación
-    total_aceptados = models.IntegerField(
-        _("Total aceptados"),
+    # Estadísticas de segmentación
+    total_defectos_detectados = models.IntegerField(
+        _("Total defectos detectados"),
         default=0,
-        help_text="Número total de coples clasificados como aceptados"
+        help_text="Número total de defectos segmentados"
     )
     
-    total_rechazados = models.IntegerField(
-        _("Total rechazados"),
+    total_piezas_detectadas = models.IntegerField(
+        _("Total piezas detectadas"),
         default=0,
-        help_text="Número total de coples clasificados como rechazados"
+        help_text="Número total de piezas segmentadas"
     )
     
     # Tiempos promedio (en milisegundos)
@@ -280,8 +161,8 @@ class EstadisticasSistema(models.Model):
         default=0.0
     )
     
-    tiempo_promedio_clasificacion_ms = models.FloatField(
-        _("Tiempo promedio clasificación (ms)"),
+    tiempo_promedio_segmentacion_ms = models.FloatField(
+        _("Tiempo promedio segmentación (ms)"),
         default=0.0
     )
     
@@ -313,9 +194,15 @@ class EstadisticasSistema(models.Model):
         return (self.analisis_exitosos / self.total_analisis) * 100
     
     @property
-    def tasa_aceptacion(self):
-        """Calcula la tasa de aceptación de coples"""
-        total_clasificados = self.total_aceptados + self.total_rechazados
-        if total_clasificados == 0:
+    def promedio_defectos_por_analisis(self):
+        """Calcula el promedio de defectos por análisis"""
+        if self.analisis_exitosos == 0:
             return 0.0
-        return (self.total_aceptados / total_clasificados) * 100
+        return self.total_defectos_detectados / self.analisis_exitosos
+    
+    @property
+    def promedio_piezas_por_analisis(self):
+        """Calcula el promedio de piezas por análisis"""
+        if self.analisis_exitosos == 0:
+            return 0.0
+        return self.total_piezas_detectadas / self.analisis_exitosos

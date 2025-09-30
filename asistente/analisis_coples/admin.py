@@ -6,9 +6,6 @@ from django.urls import reverse
 from django.utils.safestring import mark_safe
 from .models import ConfiguracionSistema, AnalisisCople
 from .resultados_models import (
-    ResultadoClasificacion,
-    DeteccionPieza,
-    DeteccionDefecto,
     SegmentacionDefecto,
     SegmentacionPieza,
     EstadisticasSistema
@@ -58,27 +55,6 @@ class ConfiguracionSistemaAdmin(admin.ModelAdmin):
         super().save_model(request, obj, form, change)
 
 
-class ResultadoClasificacionInline(admin.TabularInline):
-    """Inline para ResultadoClasificacion"""
-    model = ResultadoClasificacion
-    extra = 0
-    readonly_fields = ['clase_predicha', 'confianza', 'tiempo_inferencia_ms']
-
-
-class DeteccionPiezaInline(admin.TabularInline):
-    """Inline para DeteccionPieza"""
-    model = DeteccionPieza
-    extra = 0
-    readonly_fields = ['clase', 'confianza', 'bbox_x1', 'bbox_y1', 'bbox_x2', 'bbox_y2', 'centroide_x', 'centroide_y', 'area']
-
-
-class DeteccionDefectoInline(admin.TabularInline):
-    """Inline para DeteccionDefecto"""
-    model = DeteccionDefecto
-    extra = 0
-    readonly_fields = ['clase', 'confianza', 'bbox_x1', 'bbox_y1', 'bbox_x2', 'bbox_y2', 'centroide_x', 'centroide_y', 'area']
-
-
 class SegmentacionDefectoInline(admin.TabularInline):
     """Inline para SegmentacionDefecto"""
     model = SegmentacionDefecto
@@ -99,7 +75,7 @@ class AnalisisCopleAdmin(admin.ModelAdmin):
     
     list_display = [
         'id_analisis', 'tipo_analisis', 'estado', 'usuario', 'configuracion',
-        'timestamp_captura', 'tiempo_total_ms', 'clase_predicha', 'confianza'
+        'timestamp_captura', 'tiempo_total_ms', 'num_defectos', 'num_piezas'
     ]
     
     list_filter = [
@@ -111,16 +87,12 @@ class AnalisisCopleAdmin(admin.ModelAdmin):
     readonly_fields = [
         'id_analisis', 'timestamp_captura', 'timestamp_procesamiento',
         'archivo_imagen', 'archivo_json', 'resolucion_ancho', 'resolucion_alto',
-        'resolucion_canales', 'tiempo_captura_ms', 'tiempo_clasificacion_ms',
-        'tiempo_deteccion_piezas_ms', 'tiempo_deteccion_defectos_ms',
+        'resolucion_canales', 'tiempo_captura_ms', 
         'tiempo_segmentacion_defectos_ms', 'tiempo_segmentacion_piezas_ms',
         'tiempo_total_ms', 'metadatos_json', 'mensaje_error'
     ]
     
     inlines = [
-        ResultadoClasificacionInline,
-        DeteccionPiezaInline,
-        DeteccionDefectoInline,
         SegmentacionDefectoInline,
         SegmentacionPiezaInline
     ]
@@ -140,8 +112,7 @@ class AnalisisCopleAdmin(admin.ModelAdmin):
         }),
         ('Tiempos de Procesamiento', {
             'fields': (
-                'tiempo_captura_ms', 'tiempo_clasificacion_ms', 'tiempo_deteccion_piezas_ms',
-                'tiempo_deteccion_defectos_ms', 'tiempo_segmentacion_defectos_ms',
+                'tiempo_captura_ms', 'tiempo_segmentacion_defectos_ms',
                 'tiempo_segmentacion_piezas_ms', 'tiempo_total_ms'
             )
         }),
@@ -151,61 +122,15 @@ class AnalisisCopleAdmin(admin.ModelAdmin):
         })
     )
     
-    def clase_predicha(self, obj):
-        """Mostrar clase predicha en la lista"""
-        try:
-            return obj.resultado_clasificacion.clase_predicha
-        except:
-            return '-'
-    clase_predicha.short_description = 'Clase Predicha'
+    def num_defectos(self, obj):
+        """Mostrar número de defectos segmentados"""
+        return obj.segmentaciones_defectos.count()
+    num_defectos.short_description = 'Defectos'
     
-    def confianza(self, obj):
-        """Mostrar confianza en la lista"""
-        try:
-            return f"{obj.resultado_clasificacion.confianza:.2%}"
-        except:
-            return '-'
-    confianza.short_description = 'Confianza'
-
-
-@admin.register(ResultadoClasificacion)
-class ResultadoClasificacionAdmin(admin.ModelAdmin):
-    """Admin para ResultadoClasificacion"""
-    
-    list_display = ['analisis', 'clase_predicha', 'confianza', 'tiempo_inferencia_ms']
-    list_filter = ['clase_predicha', 'analisis__tipo_analisis', 'analisis__timestamp_captura']
-    search_fields = ['analisis__id_analisis', 'clase_predicha']
-    readonly_fields = ['analisis', 'clase_predicha', 'confianza', 'tiempo_inferencia_ms']
-
-
-@admin.register(DeteccionPieza)
-class DeteccionPiezaAdmin(admin.ModelAdmin):
-    """Admin para DeteccionPieza"""
-    
-    list_display = ['analisis', 'clase', 'confianza', 'area', 'bbox_display']
-    list_filter = ['clase', 'analisis__tipo_analisis', 'analisis__timestamp_captura']
-    search_fields = ['analisis__id_analisis', 'clase']
-    readonly_fields = ['analisis', 'clase', 'confianza', 'bbox_x1', 'bbox_y1', 'bbox_x2', 'bbox_y2', 'centroide_x', 'centroide_y', 'area']
-    
-    def bbox_display(self, obj):
-        """Mostrar bbox en formato legible"""
-        return f"({obj.bbox_x1}, {obj.bbox_y1}) - ({obj.bbox_x2}, {obj.bbox_y2})"
-    bbox_display.short_description = 'BBox'
-
-
-@admin.register(DeteccionDefecto)
-class DeteccionDefectoAdmin(admin.ModelAdmin):
-    """Admin para DeteccionDefecto"""
-    
-    list_display = ['analisis', 'clase', 'confianza', 'area', 'bbox_display']
-    list_filter = ['clase', 'analisis__tipo_analisis', 'analisis__timestamp_captura']
-    search_fields = ['analisis__id_analisis', 'clase']
-    readonly_fields = ['analisis', 'clase', 'confianza', 'bbox_x1', 'bbox_y1', 'bbox_x2', 'bbox_y2', 'centroide_x', 'centroide_y', 'area']
-    
-    def bbox_display(self, obj):
-        """Mostrar bbox en formato legible"""
-        return f"({obj.bbox_x1}, {obj.bbox_y1}) - ({obj.bbox_x2}, {obj.bbox_y2})"
-    bbox_display.short_description = 'BBox'
+    def num_piezas(self, obj):
+        """Mostrar número de piezas segmentadas"""
+        return obj.segmentaciones_piezas.count()
+    num_piezas.short_description = 'Piezas'
 
 
 @admin.register(SegmentacionDefecto)
@@ -249,7 +174,7 @@ class EstadisticasSistemaAdmin(admin.ModelAdmin):
     
     list_display = [
         'fecha', 'total_analisis', 'analisis_exitosos', 'analisis_con_error',
-        'tasa_exito', 'total_aceptados', 'total_rechazados', 'tasa_aceptacion'
+        'tasa_exito', 'total_defectos_detectados', 'total_piezas_detectadas'
     ]
     
     list_filter = ['fecha']
@@ -258,9 +183,10 @@ class EstadisticasSistemaAdmin(admin.ModelAdmin):
     
     readonly_fields = [
         'fecha', 'total_analisis', 'analisis_exitosos', 'analisis_con_error',
-        'total_aceptados', 'total_rechazados', 'tiempo_promedio_captura_ms',
-        'tiempo_promedio_clasificacion_ms', 'tiempo_promedio_total_ms',
-        'confianza_promedio', 'tasa_exito', 'tasa_aceptacion'
+        'total_defectos_detectados', 'total_piezas_detectadas', 
+        'tiempo_promedio_captura_ms', 'tiempo_promedio_segmentacion_ms', 
+        'tiempo_promedio_total_ms', 'confianza_promedio', 'tasa_exito',
+        'promedio_defectos_por_analisis', 'promedio_piezas_por_analisis'
     ]
     
     fieldsets = (
@@ -270,11 +196,15 @@ class EstadisticasSistemaAdmin(admin.ModelAdmin):
         ('Estadísticas de Análisis', {
             'fields': ('total_analisis', 'analisis_exitosos', 'analisis_con_error', 'tasa_exito')
         }),
-        ('Estadísticas de Clasificación', {
-            'fields': ('total_aceptados', 'total_rechazados', 'tasa_aceptacion', 'confianza_promedio')
+        ('Estadísticas de Segmentación', {
+            'fields': (
+                'total_defectos_detectados', 'total_piezas_detectadas', 
+                'promedio_defectos_por_analisis', 'promedio_piezas_por_analisis',
+                'confianza_promedio'
+            )
         }),
         ('Tiempos Promedio', {
-            'fields': ('tiempo_promedio_captura_ms', 'tiempo_promedio_clasificacion_ms', 'tiempo_promedio_total_ms')
+            'fields': ('tiempo_promedio_captura_ms', 'tiempo_promedio_segmentacion_ms', 'tiempo_promedio_total_ms')
         })
     )
     

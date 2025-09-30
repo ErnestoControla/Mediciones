@@ -1,13 +1,13 @@
-# 🔬 Sistema de Mediciones - Análisis de Coples
+# 🔬 Sistema de Mediciones - Segmentación de Coples
 
-Sistema de visión computacional para análisis automatizado de coples utilizando modelos de Deep Learning (ONNX) con Django REST Framework y React.
+Sistema de visión computacional para segmentación automatizada de coples utilizando modelos de Deep Learning (ONNX) con Django REST Framework y React.
 
 ## 📋 Descripción
 
-Este proyecto es un demo de un sistema de análisis visual de coples que integra:
-- **Clasificación**: Determina si un cople es aceptado o rechazado
-- **Detección**: Identifica piezas y defectos en la imagen
-- **Segmentación**: Genera máscaras precisas de defectos y piezas
+Este proyecto es un demo de un sistema de análisis visual enfocado en **segmentación de coples**:
+- **Segmentación de Defectos**: Identifica y segmenta defectos en la imagen con máscaras precisas
+- **Segmentación de Piezas**: Identifica y segmenta piezas con máscaras precisas
+- **Cámara GigE Vision**: Soporte prioritario para cámara industrial GigE
 
 ## 🏗️ Arquitectura
 
@@ -37,7 +37,25 @@ Este proyecto es un demo de un sistema de análisis visual de coples que integra
 - Cámara GigE Vision (o webcam como fallback)
 - Conexión Ethernet para cámara GigE
 
-## 📦 Instalación
+## 🚀 Setup Rápido (Recomendado)
+
+```bash
+# Clonar repositorio
+git clone https://github.com/ErnestoControla/Mediciones.git
+cd Mediciones
+
+# Ejecutar script de setup automático
+./setup.sh
+```
+
+El script automáticamente:
+- Crea el archivo `.env` desde `env.example`
+- Inicia PostgreSQL con Docker
+- Crea entorno virtual Python
+- Instala dependencias
+- Ejecuta migraciones
+
+## 📦 Instalación Manual
 
 ### 1. Clonar el Repositorio
 
@@ -46,7 +64,17 @@ git clone https://github.com/ErnestoControla/Mediciones.git
 cd Mediciones
 ```
 
-### 2. Configurar PostgreSQL
+### 2. Configurar PostgreSQL con Docker
+
+```bash
+# Iniciar PostgreSQL
+docker-compose up -d postgres
+
+# Ver logs (opcional)
+docker-compose logs -f postgres
+```
+
+### 2.1. Configurar PostgreSQL (Alternativa nativa - no recomendado)
 
 ```bash
 # Crear base de datos y usuario
@@ -107,28 +135,72 @@ nano .env.local
 
 ## 🎯 Uso
 
-### Ejecutar Backend
+### Flujo Completo de Ejecución
+
+#### 1. Iniciar PostgreSQL (Docker)
 
 ```bash
+# En la raíz del proyecto
+docker-compose up -d postgres
+
+# Verificar que está corriendo
+docker-compose ps
+```
+
+#### 2. Ejecutar Backend (Django)
+
+```bash
+# Terminal 1: Backend
 cd asistente
-source ../env/bin/activate  # Activar entorno virtual
+source ../env/bin/activate  # Activar entorno virtual (Linux/Mac)
+# o en Windows: ..\env\Scripts\activate
+
 python manage.py runserver
 ```
 
 El servidor estará disponible en: http://localhost:8000
 
+**Accesos del Backend:**
+- **API REST**: http://localhost:8000/api/
 - **Admin Django**: http://localhost:8000/admin/
 - **API Docs (Swagger)**: http://localhost:8000/api/docs/
 - **API Schema**: http://localhost:8000/api/schema/
 
-### Ejecutar Frontend
+#### 3. Ejecutar Frontend (React)
 
 ```bash
+# Terminal 2: Frontend
 cd frontend
+
+# Primera vez: instalar dependencias
+npm install
+
+# Ejecutar en modo desarrollo
 npm run dev
 ```
 
 La aplicación estará disponible en: http://localhost:5173
+
+#### 4. (Opcional) Administrar Base de Datos con PgAdmin
+
+```bash
+# Iniciar PgAdmin
+docker-compose up -d pgadmin
+
+# Acceder en: http://localhost:5050
+# Usuario: admin@mediciones.local
+# Password: admin
+```
+
+### Detener Servicios
+
+```bash
+# Detener Docker (PostgreSQL y PgAdmin)
+docker-compose down
+
+# Para eliminar también los volúmenes (¡CUIDADO! Borra la BD)
+docker-compose down -v
+```
 
 ## 📁 Estructura del Proyecto
 

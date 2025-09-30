@@ -1,8 +1,13 @@
-# Entornos virtuales de Python
+# ===================================
+# PYTHON
+# ===================================
+
+# Entornos virtuales
 env/
 venv/
 ENV/
 VENV/
+.venv/
 
 # Archivos de Python
 __pycache__/
@@ -28,40 +33,164 @@ wheels/
 .installed.cfg
 *.egg
 
-# IDEs
+# ===================================
+# DJANGO
+# ===================================
+
+# Base de datos local (SQLite)
+*.sqlite3
+*.sqlite3-journal
+db.sqlite3
+db.sqlite3-journal
+
+# Archivos media generados
+asistente/media/
+media/
+
+# Archivos estáticos recolectados
+staticfiles/
+asistente/staticfiles/
+
+# Archivos de sesión
+django_session/
+
+# Archivos de migración compilados
+*.pyc
+
+# ===================================
+# PROYECTO ESPECÍFICO - MEDICIONES
+# ===================================
+
+# Salidas de análisis de coples (imágenes y JSONs procesados)
+Salida_cople/
+asistente/Salida_cople/
+**/Salida_cople/
+
+# Modelos ONNX (archivos grandes - usar Git LFS si es necesario)
+# Comentar estas líneas si decides versionarlos con Git LFS
+# *.onnx
+# asistente/analisis_coples/Modelos/*.onnx
+
+# Configuraciones locales de cámara
+config_camara_local.json
+
+# ===================================
+# ARCHIVOS DE CONFIGURACIÓN
+# ===================================
+
+# Variables de entorno
+.env
+.env.local
+.env.*.local
+.envs/
+
+# Configuración local de Docker
+.env.docker
+
+# ===================================
+# IDEs Y EDITORES
+# ===================================
+
+# VSCode
 .vscode/
+*.code-workspace
+
+# PyCharm
 .idea/
+*.iml
+
+# Sublime Text
+*.sublime-project
+*.sublime-workspace
+
+# Vim
 *.swp
 *.swo
 *~
+
+# macOS
 .DS_Store
+.AppleDouble
+.LSOverride
 
-# Archivos de configuración locales
-*.local
-.env
-.env.local
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
 
-# Logs
-*.log
-logs/
+# ===================================
+# FRONTEND (React/Node)
+# ===================================
 
-# Archivos temporales
-*.tmp
-*.bak
-*.swp
-
-# Node modules (para el frontend)
+# Dependencies
 node_modules/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+pnpm-debug.log*
 
-# Build del frontend
+# Build outputs
 frontend/build/
 frontend/dist/
 frontend/.next/
 frontend/out/
 
+# Environment variables frontend
+frontend/.env.local
+frontend/.env.development.local
+frontend/.env.test.local
+frontend/.env.production.local
+
+# ===================================
+# LOGS Y TEMPORALES
+# ===================================
+
+# Logs
+*.log
+logs/
+*.log.*
+
+# Archivos temporales
+*.tmp
+*.bak
+*.swp
+*.cache
+
+# Coverage reports
+htmlcov/
+.coverage
+.coverage.*
+coverage.xml
+*.cover
+
+# Pytest
+.pytest_cache/
+
+# ===================================
+# DOCKER Y DEPLOYMENT
+# ===================================
+
+# Docker
+*.env.docker
+.dockerignore.local
+
+# Backups de base de datos
+*.sql
+*.dump
+backups/
+
+# ===================================
+# OTROS
+# ===================================
+
+# Jupyter Notebook
+.ipynb_checkpoints/
+*.ipynb
+
+# Certificados y claves
+*.pem
+*.key
+*.crt
+
 # Archivos de sistema
-Thumbs.db
-.DS_Store
+.Trash-*/

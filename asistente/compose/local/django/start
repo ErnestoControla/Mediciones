@@ -1,0 +1,15 @@
+#!/bin/bash
+
+set -o errexit
+set -o pipefail
+set -o nounset
+
+echo "→ Esperando que la base de datos esté disponible..."
+# Espera a que postgres esté listo (opcional, si ya tienes `wait-for-it` en tu contenedor)
+# /usr/local/bin/wait-for-it postgres:5432 --timeout=30 --strict -- echo "PostgreSQL está listo"
+
+echo "→ Aplicando migraciones..."
+python manage.py migrate
+
+echo "→ Iniciando el servidor de desarrollo Django en 0.0.0.0:8000..."
+python manage.py runserver 0.0.0.0:8000

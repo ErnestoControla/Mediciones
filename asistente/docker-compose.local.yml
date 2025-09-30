@@ -1,0 +1,60 @@
+# version: "3.9"
+
+volumes:
+  asistente_local_postgres_data: {}
+  asistente_local_postgres_data_backups: {}
+
+services:
+  django:
+    build:
+      context: .
+      dockerfile: ./compose/local/django/Dockerfile
+    image: asistente_local_django
+    container_name: asistente_local_django
+    depends_on:
+      - postgres
+      - mailpit
+    volumes:
+      - .:/app:z
+    env_file:
+      - ./.envs/.local/.django
+      - ./.envs/.local/.postgres
+    ports:
+      - "8000:8000"
+    # Configuración para acceso a webcam
+    devices:
+      - /dev/video0:/dev/video0  # Webcam principal
+      - /dev/video1:/dev/video1  # Webcam secundaria
+    environment:
+      - DISPLAY=${DISPLAY}  # Para GUI si es necesario
+    command: /start
+
+  postgres:
+    build:
+      context: .
+      dockerfile: ./compose/production/postgres/Dockerfile
+    image: asistente_production_postgres
+    container_name: asistente_local_postgres
+    volumes:
+      - asistente_local_postgres_data:/var/lib/postgresql/data
+      - asistente_local_postgres_data_backups:/backups
+    env_file:
+      - ./.envs/.local/.postgres
+
+  frontend:
+    build:
+      context: ../frontend
+      dockerfile: Dockerfile.dev  # Usa el Dockerfile ajustado
+    ports:
+      - "5173:5173"
+    volumes:
+      - ../frontend:/app:cached
+      - /app/node_modules  # Prevenir conflicto con node_modules del host
+    environment:
+      - VITE_API_URL=http://localhost:8000/api/
+
+  mailpit:
+    image: docker.io/axllent/mailpit:latest
+    container_name: asistente_local_mailpit
+    ports:
+      - "8025:8025"

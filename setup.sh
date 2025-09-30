@@ -43,6 +43,9 @@ echo "📦 Instalando dependencias de Python..."
 cd asistente
 pip install -r requirements.txt
 
+# Exportar variable para que Django lea el .env
+export DJANGO_READ_DOT_ENV_FILE=True
+
 # Ejecutar migraciones
 echo "🔄 Ejecutando migraciones..."
 python manage.py migrate

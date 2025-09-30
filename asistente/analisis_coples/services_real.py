@@ -24,9 +24,6 @@ from django.core.files.storage import default_storage
 # Importar modelos Django
 from .models import ConfiguracionSistema, AnalisisCople
 from .resultados_models import (
-    ResultadoClasificacion,
-    DeteccionPieza,
-    DeteccionDefecto,
     SegmentacionDefecto,
     SegmentacionPieza
 )
@@ -53,8 +50,14 @@ class ServicioAnalisisCoplesReal:
         self.sistema_analisis = SistemaAnalisisIntegrado()
         self.usando_webcam = False
         
-        # Intentar cargar la configuración activa automáticamente
-        self._cargar_configuracion_activa()
+        # Intentar cargar la configuración activa automáticamente (solo si las tablas existen)
+        try:
+            from django.db import connection
+            tables = connection.introspection.table_names()
+            if 'analisis_coples_configuracionsistema' in tables:
+                self._cargar_configuracion_activa()
+        except:
+            pass  # Las tablas aún no existen, se cargarán después de las migraciones
     
     def _cargar_configuracion_activa(self):
         """Carga la configuración activa de la base de datos"""

@@ -18,7 +18,7 @@ import base64
 import logging
 
 from ..models import AnalisisCople
-from ..resultados_models import ResultadoClasificacion, DeteccionPieza, DeteccionDefecto
+from ..resultados_models import SegmentacionDefecto, SegmentacionPieza
 
 logger = logging.getLogger(__name__)
 

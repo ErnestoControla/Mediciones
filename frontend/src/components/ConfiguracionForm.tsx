@@ -63,7 +63,7 @@ const ConfiguracionForm: React.FC<ConfiguracionFormProps> = ({
   const formik = useFormik({
     initialValues: {
       nombre: configuracion?.nombre || '',
-      ip_camara: configuracion?.ip_camara || '172.16.1.21',
+      ip_camara: configuracion?.ip_camara || '172.16.1.24',
       umbral_confianza: configuracion?.umbral_confianza || 0.55,
       umbral_iou: configuracion?.umbral_iou || 0.35,
       configuracion_robustez: configuracion?.configuracion_robustez || 'original',

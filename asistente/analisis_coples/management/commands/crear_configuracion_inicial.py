@@ -20,7 +20,7 @@ class Command(BaseCommand):
         parser.add_argument(
             '--ip-camara',
             type=str,
-            default='172.16.1.21',
+            default='172.16.1.24',
             help='IP de la cámara'
         )
         parser.add_argument(

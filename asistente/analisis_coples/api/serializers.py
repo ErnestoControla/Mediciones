@@ -2,7 +2,7 @@
 
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
-from ..models import ConfiguracionSistema, AnalisisCople
+from ..models import ConfiguracionSistema, AnalisisCople, RutinaInspeccion, EstadoCamara
 from ..resultados_models import (
     SegmentacionDefecto,
     SegmentacionPieza,
@@ -21,23 +21,28 @@ class ConfiguracionSistemaSerializer(serializers.ModelSerializer):
         model = ConfiguracionSistema
         fields = [
             'id', 'nombre', 'ip_camara', 'umbral_confianza', 'umbral_iou',
-            'configuracion_robustez', 'activa', 'creada_por', 'creada_por_nombre',
+            'configuracion_robustez', 'distancia_camara_mm', 'factor_conversion_px_mm',
+            'activa', 'creada_por', 'creada_por_nombre',
             'fecha_creacion', 'fecha_modificacion'
         ]
         read_only_fields = ['id', 'fecha_creacion', 'fecha_modificacion']
 
 
 class SegmentacionDefectoSerializer(serializers.ModelSerializer):
-    """Serializer para SegmentacionDefecto"""
+    """Serializer para SegmentacionDefecto con mediciones dimensionales"""
     
     bbox = serializers.SerializerMethodField()
     centroide = serializers.SerializerMethodField()
+    mediciones_px = serializers.SerializerMethodField()
+    mediciones_mm = serializers.SerializerMethodField()
+    geometria = serializers.SerializerMethodField()
     
     class Meta:
         model = SegmentacionDefecto
         fields = [
-            'clase', 'confianza', 'bbox', 'centroide', 
-            'area_mascara', 'coeficientes_mascara'
+            'id', 'clase', 'confianza', 'bbox', 'centroide', 
+            'mediciones_px', 'mediciones_mm', 'geometria',
+            'coeficientes_mascara'
         ]
     
     def get_bbox(self, obj):
@@ -52,20 +57,52 @@ class SegmentacionDefectoSerializer(serializers.ModelSerializer):
         return {
             'x': obj.centroide_x,
             'y': obj.centroide_y
+        }
+    
+    def get_mediciones_px(self, obj):
+        return {
+            'ancho_bbox': obj.ancho_bbox_px,
+            'alto_bbox': obj.alto_bbox_px,
+            'ancho_mascara': obj.ancho_mascara_px,
+            'alto_mascara': obj.alto_mascara_px,
+            'perimetro': obj.perimetro_mascara_px,
+            'area': obj.area_mascara_px
+        }
+    
+    def get_mediciones_mm(self, obj):
+        if obj.ancho_bbox_mm is not None:
+            return {
+                'ancho_bbox': obj.ancho_bbox_mm,
+                'alto_bbox': obj.alto_bbox_mm,
+                'ancho_mascara': obj.ancho_mascara_mm,
+                'alto_mascara': obj.alto_mascara_mm,
+                'perimetro': obj.perimetro_mascara_mm,
+                'area': obj.area_mascara_mm
+            }
+        return None
+    
+    def get_geometria(self, obj):
+        return {
+            'excentricidad': obj.excentricidad,
+            'orientacion_grados': obj.orientacion_grados
         }
 
 
 class SegmentacionPiezaSerializer(serializers.ModelSerializer):
-    """Serializer para SegmentacionPieza"""
+    """Serializer para SegmentacionPieza con mediciones dimensionales"""
     
     bbox = serializers.SerializerMethodField()
     centroide = serializers.SerializerMethodField()
+    mediciones_px = serializers.SerializerMethodField()
+    mediciones_mm = serializers.SerializerMethodField()
+    geometria = serializers.SerializerMethodField()
     
     class Meta:
         model = SegmentacionPieza
         fields = [
-            'clase', 'confianza', 'bbox', 'centroide', 
-            'area_mascara', 'ancho_mascara', 'alto_mascara', 'coeficientes_mascara'
+            'id', 'clase', 'confianza', 'bbox', 'centroide', 
+            'mediciones_px', 'mediciones_mm', 'geometria',
+            'coeficientes_mascara'
         ]
     
     def get_bbox(self, obj):
@@ -80,6 +117,34 @@ class SegmentacionPiezaSerializer(serializers.ModelSerializer):
         return {
             'x': obj.centroide_x,
             'y': obj.centroide_y
+        }
+    
+    def get_mediciones_px(self, obj):
+        return {
+            'ancho_bbox': obj.ancho_bbox_px,
+            'alto_bbox': obj.alto_bbox_px,
+            'ancho_mascara': obj.ancho_mascara_px,
+            'alto_mascara': obj.alto_mascara_px,
+            'perimetro': obj.perimetro_mascara_px,
+            'area': obj.area_mascara_px
+        }
+    
+    def get_mediciones_mm(self, obj):
+        if obj.ancho_bbox_mm is not None:
+            return {
+                'ancho_bbox': obj.ancho_bbox_mm,
+                'alto_bbox': obj.alto_bbox_mm,
+                'ancho_mascara': obj.ancho_mascara_mm,
+                'alto_mascara': obj.alto_mascara_mm,
+                'perimetro': obj.perimetro_mascara_mm,
+                'area': obj.area_mascara_mm
+            }
+        return None
+    
+    def get_geometria(self, obj):
+        return {
+            'excentricidad': obj.excentricidad,
+            'orientacion_grados': obj.orientacion_grados
         }
 
 
@@ -163,15 +228,15 @@ class EstadisticasSistemaSerializer(serializers.ModelSerializer):
 
 
 class AnalisisRequestSerializer(serializers.Serializer):
-    """Serializer para solicitudes de análisis (solo segmentación)"""
+    """Serializer para solicitudes de análisis con medición dimensional"""
     
     tipo_analisis = serializers.ChoiceField(
         choices=[
-            ('segmentacion_completa', 'Segmentación Completa (Defectos + Piezas)'),
-            ('segmentacion_defectos', 'Solo Segmentación de Defectos'),
-            ('segmentacion_piezas', 'Solo Segmentación de Piezas'),
+            ('medicion_piezas', 'Medición de Piezas'),
+            ('medicion_defectos', 'Medición de Defectos'),
+            ('rutina_inspeccion', 'Rutina de Inspección Multi-Ángulo'),
         ],
-        default='segmentacion_completa'
+        default='medicion_piezas'
     )
     
     configuracion_id = serializers.IntegerField(required=False, allow_null=True)
@@ -182,3 +247,61 @@ class ConfiguracionRequestSerializer(serializers.Serializer):
     
     configuracion_id = serializers.IntegerField(required=True)
     activar = serializers.BooleanField(default=True)
+
+
+class RutinaInspeccionSerializer(serializers.ModelSerializer):
+    """Serializer para RutinaInspeccion"""
+    
+    usuario_nombre = serializers.CharField(source='usuario.name', read_only=True)
+    configuracion_nombre = serializers.CharField(source='configuracion.nombre', read_only=True)
+    analisis_individuales = serializers.PrimaryKeyRelatedField(many=True, read_only=True)
+    duracion_minutos = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = RutinaInspeccion
+        fields = [
+            'id', 'id_rutina', 'timestamp_inicio', 'timestamp_fin', 'estado',
+            'configuracion', 'configuracion_nombre', 'usuario', 'usuario_nombre',
+            'num_imagenes_capturadas', 'imagen_consolidada', 'reporte_json',
+            'mensaje_error', 'analisis_individuales', 'duracion_minutos'
+        ]
+        read_only_fields = [
+            'id', 'timestamp_inicio', 'timestamp_fin', 'imagen_consolidada',
+            'reporte_json', 'mensaje_error', 'duracion_minutos'
+        ]
+    
+    def get_duracion_minutos(self, obj):
+        if obj.timestamp_fin and obj.timestamp_inicio:
+            delta = obj.timestamp_fin - obj.timestamp_inicio
+            return round(delta.total_seconds() / 60, 2)
+        return None
+
+
+class EstadoCamaraSerializer(serializers.ModelSerializer):
+    """Serializer para EstadoCamara"""
+    
+    modelo_cargado_display = serializers.CharField(
+        source='get_modelo_cargado_display', 
+        read_only=True
+    )
+    tiempo_desde_ultimo_uso = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = EstadoCamara
+        fields = [
+            'id', 'activa', 'en_preview', 'hibernada', 'modelo_cargado',
+            'modelo_cargado_display', 'frame_rate_actual', 'ultimo_uso',
+            'ultima_actualizacion', 'tiempo_desde_ultimo_uso'
+        ]
+        read_only_fields = ['id', 'ultimo_uso', 'ultima_actualizacion']
+    
+    def get_tiempo_desde_ultimo_uso(self, obj):
+        from django.utils import timezone
+        delta = timezone.now() - obj.ultimo_uso
+        segundos = int(delta.total_seconds())
+        if segundos < 60:
+            return f"{segundos}s"
+        elif segundos < 3600:
+            return f"{segundos // 60}m"
+        else:
+            return f"{segundos // 3600}h"

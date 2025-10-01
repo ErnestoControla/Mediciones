@@ -46,7 +46,7 @@ La implementación debe incluir:
 **El sistema opera en modo secuencial para optimizar memoria:**
 
 1. **Seleccionar y inicializar cámara GigE**
-   - Conexión a cámara industrial GigE Vision (IP: 172.16.1.21)
+   - Conexión a cámara industrial GigE Vision (IP: 172.16.1.24)
    - Iniciar previsualización a 5 FPS
 
 2. **Inicializar UN modelo** (NO ambos simultáneamente)
@@ -201,7 +201,7 @@ npm run dev
 ### **ConfiguracionSistema**
 ```python
 - nombre: str (único)
-- ip_camara: IP (default: 172.16.1.21)
+- ip_camara: IP (default: 172.16.1.24)
 - umbral_confianza: float (0.0-1.0, configurable para ambos modelos)
 - umbral_iou: float (0.0-1.0)
 - distancia_camara_mm: float (para cálculo de factor de conversión)
@@ -575,7 +575,7 @@ Para garantizar que las modificaciones sean pequeñas y probables, el agente deb
 ## 9.1 Hardware
 **Cámara GigE Vision** es la prioridad
 - Marca/Modelo: Compatible con Sapera SDK
-- IP fija: 172.16.1.21
+- IP fija: 172.16.1.24
 - Conexión: Ethernet
 - Webcam: Solo como fallback en caso de falla
 

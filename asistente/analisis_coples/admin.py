@@ -4,7 +4,7 @@ from django.contrib import admin
 from django.utils.html import format_html
 from django.urls import reverse
 from django.utils.safestring import mark_safe
-from .models import ConfiguracionSistema, AnalisisCople
+from .models import ConfiguracionSistema, AnalisisCople, RutinaInspeccion, EstadoCamara
 from .resultados_models import (
     SegmentacionDefecto,
     SegmentacionPieza,
@@ -59,14 +59,14 @@ class SegmentacionDefectoInline(admin.TabularInline):
     """Inline para SegmentacionDefecto"""
     model = SegmentacionDefecto
     extra = 0
-    readonly_fields = ['clase', 'confianza', 'bbox_x1', 'bbox_y1', 'bbox_x2', 'bbox_y2', 'centroide_x', 'centroide_y', 'area_mascara']
+    readonly_fields = ['clase', 'confianza', 'ancho_bbox_px', 'alto_bbox_px', 'area_mascara_px', 'perimetro_mascara_px']
 
 
 class SegmentacionPiezaInline(admin.TabularInline):
     """Inline para SegmentacionPieza"""
     model = SegmentacionPieza
     extra = 0
-    readonly_fields = ['clase', 'confianza', 'bbox_x1', 'bbox_y1', 'bbox_x2', 'bbox_y2', 'centroide_x', 'centroide_y', 'area_mascara', 'ancho_mascara', 'alto_mascara']
+    readonly_fields = ['clase', 'confianza', 'ancho_bbox_px', 'alto_bbox_px', 'area_mascara_px', 'perimetro_mascara_px']
 
 
 @admin.register(AnalisisCople)
@@ -137,25 +137,50 @@ class AnalisisCopleAdmin(admin.ModelAdmin):
 class SegmentacionDefectoAdmin(admin.ModelAdmin):
     """Admin para SegmentacionDefecto"""
     
-    list_display = ['analisis', 'clase', 'confianza', 'area_mascara', 'bbox_display']
+    list_display = ['analisis', 'clase', 'confianza', 'area_mascara_px', 'bbox_display', 'mediciones_display']
     list_filter = ['clase', 'analisis__tipo_analisis', 'analisis__timestamp_captura']
     search_fields = ['analisis__id_analisis', 'clase']
-    readonly_fields = ['analisis', 'clase', 'confianza', 'bbox_x1', 'bbox_y1', 'bbox_x2', 'bbox_y2', 'centroide_x', 'centroide_y', 'area_mascara', 'coeficientes_mascara']
+    readonly_fields = [
+        'analisis', 'clase', 'confianza', 
+        'bbox_x1', 'bbox_y1', 'bbox_x2', 'bbox_y2',
+        'ancho_bbox_px', 'alto_bbox_px',
+        'centroide_x', 'centroide_y',
+        'area_mascara_px', 'ancho_mascara_px', 'alto_mascara_px', 'perimetro_mascara_px',
+        'excentricidad', 'orientacion_grados',
+        'ancho_bbox_mm', 'alto_bbox_mm', 'ancho_mascara_mm', 'alto_mascara_mm',
+        'perimetro_mascara_mm', 'area_mascara_mm',
+        'coeficientes_mascara'
+    ]
     
     def bbox_display(self, obj):
         """Mostrar bbox en formato legible"""
         return f"({obj.bbox_x1}, {obj.bbox_y1}) - ({obj.bbox_x2}, {obj.bbox_y2})"
     bbox_display.short_description = 'BBox'
+    
+    def mediciones_display(self, obj):
+        """Mostrar mediciones principales"""
+        return f"{obj.ancho_mascara_px:.1f}×{obj.alto_mascara_px:.1f} px"
+    mediciones_display.short_description = 'Dimensiones'
 
 
 @admin.register(SegmentacionPieza)
 class SegmentacionPiezaAdmin(admin.ModelAdmin):
     """Admin para SegmentacionPieza"""
     
-    list_display = ['analisis', 'clase', 'confianza', 'area_mascara', 'dimensiones_mascara', 'bbox_display']
+    list_display = ['analisis', 'clase', 'confianza', 'area_mascara_px', 'dimensiones_mascara', 'bbox_display']
     list_filter = ['clase', 'analisis__tipo_analisis', 'analisis__timestamp_captura']
     search_fields = ['analisis__id_analisis', 'clase']
-    readonly_fields = ['analisis', 'clase', 'confianza', 'bbox_x1', 'bbox_y1', 'bbox_x2', 'bbox_y2', 'centroide_x', 'centroide_y', 'area_mascara', 'ancho_mascara', 'alto_mascara', 'coeficientes_mascara']
+    readonly_fields = [
+        'analisis', 'clase', 'confianza', 
+        'bbox_x1', 'bbox_y1', 'bbox_x2', 'bbox_y2',
+        'ancho_bbox_px', 'alto_bbox_px',
+        'centroide_x', 'centroide_y',
+        'area_mascara_px', 'ancho_mascara_px', 'alto_mascara_px', 'perimetro_mascara_px',
+        'excentricidad', 'orientacion_grados',
+        'ancho_bbox_mm', 'alto_bbox_mm', 'ancho_mascara_mm', 'alto_mascara_mm',
+        'perimetro_mascara_mm', 'area_mascara_mm',
+        'coeficientes_mascara'
+    ]
     
     def bbox_display(self, obj):
         """Mostrar bbox en formato legible"""
@@ -164,8 +189,8 @@ class SegmentacionPiezaAdmin(admin.ModelAdmin):
     
     def dimensiones_mascara(self, obj):
         """Mostrar dimensiones de la máscara"""
-        return f"{obj.ancho_mascara}x{obj.alto_mascara}"
-    dimensiones_mascara.short_description = 'Dimensiones Máscara'
+        return f"{obj.ancho_mascara_px:.1f}×{obj.alto_mascara_px:.1f} px"
+    dimensiones_mascara.short_description = 'Dimensiones'
 
 
 @admin.register(EstadisticasSistema)
@@ -218,4 +243,115 @@ class EstadisticasSistemaAdmin(admin.ModelAdmin):
     
     def has_delete_permission(self, request, obj=None):
         """No permitir eliminar estadísticas"""
+        return False
+
+
+@admin.register(RutinaInspeccion)
+class RutinaInspeccionAdmin(admin.ModelAdmin):
+    """Admin para RutinaInspeccion"""
+    
+    list_display = [
+        'id_rutina', 'estado', 'usuario', 'configuracion',
+        'num_imagenes_capturadas', 'timestamp_inicio', 'duracion'
+    ]
+    
+    list_filter = ['estado', 'usuario', 'configuracion', 'timestamp_inicio']
+    
+    search_fields = ['id_rutina', 'usuario__username', 'configuracion__nombre']
+    
+    readonly_fields = [
+        'id_rutina', 'timestamp_inicio', 'timestamp_fin', 'num_imagenes_capturadas',
+        'imagen_consolidada', 'reporte_json', 'mensaje_error', 'duracion'
+    ]
+    
+    fieldsets = (
+        ('Información Básica', {
+            'fields': ('id_rutina', 'estado', 'usuario', 'configuracion')
+        }),
+        ('Capturas', {
+            'fields': ('num_imagenes_capturadas', 'imagen_consolidada')
+        }),
+        ('Timestamps', {
+            'fields': ('timestamp_inicio', 'timestamp_fin', 'duracion')
+        }),
+        ('Reporte y Errores', {
+            'fields': ('reporte_json', 'mensaje_error'),
+            'classes': ('collapse',)
+        })
+    )
+    
+    def duracion(self, obj):
+        """Mostrar duración de la rutina"""
+        if obj.timestamp_fin and obj.timestamp_inicio:
+            delta = obj.timestamp_fin - obj.timestamp_inicio
+            minutos = delta.total_seconds() / 60
+            return f"{minutos:.2f} min"
+        return '-'
+    duracion.short_description = 'Duración'
+
+
+@admin.register(EstadoCamara)
+class EstadoCamaraAdmin(admin.ModelAdmin):
+    """Admin para EstadoCamara"""
+    
+    list_display = [
+        'estado_display', 'modelo_cargado', 'frame_rate_actual',
+        'ultimo_uso', 'tiempo_inactivo'
+    ]
+    
+    readonly_fields = [
+        'singleton_id', 'ultimo_uso', 'ultima_actualizacion', 'tiempo_inactivo'
+    ]
+    
+    fieldsets = (
+        ('Estado Actual', {
+            'fields': ('activa', 'en_preview', 'hibernada')
+        }),
+        ('Modelo Cargado', {
+            'fields': ('modelo_cargado',)
+        }),
+        ('Configuración', {
+            'fields': ('frame_rate_actual',)
+        }),
+        ('Timestamps', {
+            'fields': ('ultimo_uso', 'ultima_actualizacion', 'tiempo_inactivo'),
+            'classes': ('collapse',)
+        }),
+        ('Sistema', {
+            'fields': ('singleton_id',),
+            'classes': ('collapse',)
+        })
+    )
+    
+    def estado_display(self, obj):
+        """Mostrar estado actual de la cámara"""
+        if obj.hibernada:
+            return format_html('<span style="color: orange;">⏸ Hibernada</span>')
+        elif obj.en_preview:
+            return format_html('<span style="color: green;">▶ Preview {} FPS</span>', obj.frame_rate_actual)
+        elif obj.activa:
+            return format_html('<span style="color: blue;">● Activa</span>')
+        else:
+            return format_html('<span style="color: gray;">○ Inactiva</span>')
+    estado_display.short_description = 'Estado'
+    
+    def tiempo_inactivo(self, obj):
+        """Mostrar tiempo desde el último uso"""
+        from django.utils import timezone
+        delta = timezone.now() - obj.ultimo_uso
+        segundos = int(delta.total_seconds())
+        if segundos < 60:
+            return f"{segundos}s"
+        elif segundos < 3600:
+            return f"{segundos // 60}m"
+        else:
+            return f"{segundos // 3600}h"
+    tiempo_inactivo.short_description = 'Inactivo desde'
+    
+    def has_add_permission(self, request):
+        """Solo permitir un registro (singleton)"""
+        return EstadoCamara.objects.count() == 0
+    
+    def has_delete_permission(self, request, obj=None):
+        """No permitir eliminar el estado"""
         return False

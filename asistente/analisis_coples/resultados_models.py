@@ -38,12 +38,87 @@ class SegmentacionDefecto(models.Model):
     bbox_x2 = models.IntegerField(_("BBox X2"))
     bbox_y2 = models.IntegerField(_("BBox Y2"))
     
+    # Dimensiones del BBox (en píxeles)
+    ancho_bbox_px = models.FloatField(
+        _("Ancho BBox (px)"),
+        help_text="Ancho del bounding box en píxeles"
+    )
+    alto_bbox_px = models.FloatField(
+        _("Alto BBox (px)"),
+        help_text="Alto del bounding box en píxeles"
+    )
+    
     # Centroide
     centroide_x = models.IntegerField(_("Centroide X"))
     centroide_y = models.IntegerField(_("Centroide Y"))
     
-    # Área de la máscara
-    area_mascara = models.IntegerField(_("Área de máscara"), help_text="Área en píxeles")
+    # Dimensiones de la máscara (en píxeles)
+    area_mascara_px = models.IntegerField(
+        _("Área de máscara (px)"), 
+        help_text="Área de la máscara en píxeles"
+    )
+    ancho_mascara_px = models.FloatField(
+        _("Ancho máscara (px)"),
+        help_text="Ancho mínimo que contiene la máscara en píxeles"
+    )
+    alto_mascara_px = models.FloatField(
+        _("Alto máscara (px)"),
+        help_text="Alto mínimo que contiene la máscara en píxeles"
+    )
+    perimetro_mascara_px = models.FloatField(
+        _("Perímetro máscara (px)"),
+        help_text="Perímetro del contorno de la máscara en píxeles"
+    )
+    
+    # Características geométricas avanzadas
+    excentricidad = models.FloatField(
+        _("Excentricidad"),
+        validators=[MinValueValidator(0.0), MaxValueValidator(1.0)],
+        help_text="Excentricidad del objeto (0=círculo, 1=línea)"
+    )
+    orientacion_grados = models.FloatField(
+        _("Orientación (grados)"),
+        validators=[MinValueValidator(0.0), MaxValueValidator(360.0)],
+        help_text="Ángulo de orientación del eje mayor en grados"
+    )
+    
+    # Mediciones en milímetros (futuro - nullable)
+    ancho_bbox_mm = models.FloatField(
+        _("Ancho BBox (mm)"),
+        null=True,
+        blank=True,
+        help_text="Ancho del bounding box en milímetros"
+    )
+    alto_bbox_mm = models.FloatField(
+        _("Alto BBox (mm)"),
+        null=True,
+        blank=True,
+        help_text="Alto del bounding box en milímetros"
+    )
+    ancho_mascara_mm = models.FloatField(
+        _("Ancho máscara (mm)"),
+        null=True,
+        blank=True,
+        help_text="Ancho de la máscara en milímetros"
+    )
+    alto_mascara_mm = models.FloatField(
+        _("Alto máscara (mm)"),
+        null=True,
+        blank=True,
+        help_text="Alto de la máscara en milímetros"
+    )
+    perimetro_mascara_mm = models.FloatField(
+        _("Perímetro máscara (mm)"),
+        null=True,
+        blank=True,
+        help_text="Perímetro de la máscara en milímetros"
+    )
+    area_mascara_mm = models.FloatField(
+        _("Área máscara (mm²)"),
+        null=True,
+        blank=True,
+        help_text="Área de la máscara en milímetros cuadrados"
+    )
     
     # Coeficientes de la máscara (serializados como JSON)
     coeficientes_mascara = models.JSONField(
@@ -88,16 +163,87 @@ class SegmentacionPieza(models.Model):
     bbox_x2 = models.IntegerField(_("BBox X2"))
     bbox_y2 = models.IntegerField(_("BBox Y2"))
     
+    # Dimensiones del BBox (en píxeles)
+    ancho_bbox_px = models.FloatField(
+        _("Ancho BBox (px)"),
+        help_text="Ancho del bounding box en píxeles"
+    )
+    alto_bbox_px = models.FloatField(
+        _("Alto BBox (px)"),
+        help_text="Alto del bounding box en píxeles"
+    )
+    
     # Centroide
     centroide_x = models.IntegerField(_("Centroide X"))
     centroide_y = models.IntegerField(_("Centroide Y"))
     
-    # Área de la máscara
-    area_mascara = models.IntegerField(_("Área de máscara"), help_text="Área en píxeles")
+    # Dimensiones de la máscara (en píxeles)
+    area_mascara_px = models.IntegerField(
+        _("Área de máscara (px)"), 
+        help_text="Área de la máscara en píxeles"
+    )
+    ancho_mascara_px = models.FloatField(
+        _("Ancho máscara (px)"),
+        help_text="Ancho mínimo que contiene la máscara en píxeles"
+    )
+    alto_mascara_px = models.FloatField(
+        _("Alto máscara (px)"),
+        help_text="Alto mínimo que contiene la máscara en píxeles"
+    )
+    perimetro_mascara_px = models.FloatField(
+        _("Perímetro máscara (px)"),
+        help_text="Perímetro del contorno de la máscara en píxeles"
+    )
     
-    # Dimensiones de la máscara
-    ancho_mascara = models.IntegerField(_("Ancho de máscara"))
-    alto_mascara = models.IntegerField(_("Alto de máscara"))
+    # Características geométricas avanzadas
+    excentricidad = models.FloatField(
+        _("Excentricidad"),
+        validators=[MinValueValidator(0.0), MaxValueValidator(1.0)],
+        help_text="Excentricidad del objeto (0=círculo, 1=línea)"
+    )
+    orientacion_grados = models.FloatField(
+        _("Orientación (grados)"),
+        validators=[MinValueValidator(0.0), MaxValueValidator(360.0)],
+        help_text="Ángulo de orientación del eje mayor en grados"
+    )
+    
+    # Mediciones en milímetros (futuro - nullable)
+    ancho_bbox_mm = models.FloatField(
+        _("Ancho BBox (mm)"),
+        null=True,
+        blank=True,
+        help_text="Ancho del bounding box en milímetros"
+    )
+    alto_bbox_mm = models.FloatField(
+        _("Alto BBox (mm)"),
+        null=True,
+        blank=True,
+        help_text="Alto del bounding box en milímetros"
+    )
+    ancho_mascara_mm = models.FloatField(
+        _("Ancho máscara (mm)"),
+        null=True,
+        blank=True,
+        help_text="Ancho de la máscara en milímetros"
+    )
+    alto_mascara_mm = models.FloatField(
+        _("Alto máscara (mm)"),
+        null=True,
+        blank=True,
+        help_text="Alto de la máscara en milímetros"
+    )
+    perimetro_mascara_mm = models.FloatField(
+        _("Perímetro máscara (mm)"),
+        null=True,
+        blank=True,
+        help_text="Perímetro de la máscara en milímetros"
+    )
+    area_mascara_mm = models.FloatField(
+        _("Área máscara (mm²)"),
+        null=True,
+        blank=True,
+        help_text="Área de la máscara en milímetros cuadrados"
+    )
     
     # Coeficientes de la máscara (serializados como JSON)
     coeficientes_mascara = models.JSONField(

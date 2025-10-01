@@ -19,7 +19,7 @@ class ConfiguracionSistema(models.Model):
     # Configuración de cámara
     ip_camara = models.GenericIPAddressField(
         _("IP de la cámara"), 
-        default="172.16.1.21",
+        default="172.16.1.24",
         help_text="Dirección IP de la cámara GigE"
     )
     
@@ -50,6 +50,23 @@ class ConfiguracionSistema(models.Model):
         ],
         default='original',
         help_text="Configuración de robustez del sistema"
+    )
+    
+    # Configuración de conversión píxeles → milímetros
+    distancia_camara_mm = models.FloatField(
+        _("Distancia cámara-objeto (mm)"),
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(0.0)],
+        help_text="Distancia entre la cámara y el objeto en milímetros"
+    )
+    
+    factor_conversion_px_mm = models.FloatField(
+        _("Factor de conversión px → mm"),
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(0.0)],
+        help_text="Factor de conversión de píxeles a milímetros (mm/px)"
     )
     
     # Metadatos
@@ -96,9 +113,9 @@ class AnalisisCople(models.Model):
     ]
     
     TIPO_ANALISIS_CHOICES = [
-        ('segmentacion_completa', 'Segmentación Completa (Defectos + Piezas)'),
-        ('segmentacion_defectos', 'Solo Segmentación de Defectos'),
-        ('segmentacion_piezas', 'Solo Segmentación de Piezas'),
+        ('medicion_piezas', 'Medición de Piezas'),
+        ('medicion_defectos', 'Medición de Defectos'),
+        ('rutina_inspeccion', 'Rutina de Inspección Multi-Ángulo'),
     ]
     
     # Identificación
@@ -125,7 +142,24 @@ class AnalisisCople(models.Model):
         _("Tipo de análisis"),
         max_length=30,
         choices=TIPO_ANALISIS_CHOICES,
-        default='segmentacion_completa'
+        default='medicion_piezas'
+    )
+    
+    # Campos para rutinas de inspección
+    es_rutina = models.BooleanField(
+        _("Es parte de rutina"),
+        default=False,
+        help_text="Indica si este análisis es parte de una rutina de inspección"
+    )
+    
+    rutina_padre = models.ForeignKey(
+        'RutinaInspeccion',
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        verbose_name=_("Rutina padre"),
+        related_name="analisis_individuales",
+        help_text="Rutina de inspección a la que pertenece este análisis"
     )
     
     estado = models.CharField(
@@ -214,6 +248,194 @@ class AnalisisCople(models.Model):
     
     def __str__(self):
         return f"Análisis {self.id_analisis} - {self.get_estado_display()}"
+
+
+class RutinaInspeccion(models.Model):
+    """Rutina de inspección multi-ángulo de un cople"""
+    
+    ESTADO_CHOICES = [
+        ('en_progreso', 'En Progreso'),
+        ('completado', 'Completado'),
+        ('error', 'Error'),
+    ]
+    
+    # Identificación
+    id_rutina = models.CharField(
+        _("ID de rutina"),
+        max_length=50,
+        unique=True,
+        help_text="Identificador único de la rutina de inspección"
+    )
+    
+    # Timestamps
+    timestamp_inicio = models.DateTimeField(
+        _("Timestamp de inicio"),
+        help_text="Momento en que se inició la rutina"
+    )
+    
+    timestamp_fin = models.DateTimeField(
+        _("Timestamp de finalización"),
+        null=True,
+        blank=True,
+        help_text="Momento en que se finalizó la rutina"
+    )
+    
+    # Estado
+    estado = models.CharField(
+        _("Estado"),
+        max_length=20,
+        choices=ESTADO_CHOICES,
+        default='en_progreso'
+    )
+    
+    # Configuración utilizada
+    configuracion = models.ForeignKey(
+        ConfiguracionSistema,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        verbose_name=_("Configuración utilizada"),
+        related_name="rutinas_realizadas"
+    )
+    
+    # Usuario que realizó la rutina
+    usuario = models.ForeignKey(
+        'users.User',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        verbose_name=_("Usuario"),
+        related_name="rutinas_realizadas"
+    )
+    
+    # Información de capturas
+    num_imagenes_capturadas = models.IntegerField(
+        _("Número de imágenes capturadas"),
+        default=0,
+        help_text="Debe ser 6 para una rutina completa"
+    )
+    
+    # Archivos generados
+    imagen_consolidada = models.CharField(
+        _("Imagen consolidada"),
+        max_length=255,
+        blank=True,
+        help_text="Nombre del archivo de imagen consolidada"
+    )
+    
+    # Reporte consolidado
+    reporte_json = models.JSONField(
+        _("Reporte consolidado"),
+        default=dict,
+        help_text="Resumen consolidado de las 6 mediciones"
+    )
+    
+    # Mensaje de error (si aplica)
+    mensaje_error = models.TextField(
+        _("Mensaje de error"),
+        blank=True,
+        help_text="Mensaje de error si la rutina falló"
+    )
+    
+    class Meta:
+        verbose_name = _("Rutina de Inspección")
+        verbose_name_plural = _("Rutinas de Inspección")
+        ordering = ['-timestamp_inicio']
+        indexes = [
+            models.Index(fields=['timestamp_inicio']),
+            models.Index(fields=['estado']),
+            models.Index(fields=['usuario']),
+        ]
+    
+    def __str__(self):
+        return f"Rutina {self.id_rutina} - {self.get_estado_display()} ({self.num_imagenes_capturadas}/6)"
+
+
+class EstadoCamara(models.Model):
+    """Estado actual de la cámara GigE (singleton)"""
+    
+    # Solo debe existir un registro
+    singleton_id = models.BooleanField(
+        default=True,
+        unique=True,
+        help_text="Garantiza que solo exista un registro"
+    )
+    
+    # Estado de la cámara
+    activa = models.BooleanField(
+        _("Cámara activa"),
+        default=False,
+        help_text="Indica si la cámara está inicializada"
+    )
+    
+    en_preview = models.BooleanField(
+        _("En previsualización"),
+        default=False,
+        help_text="Indica si está transmitiendo preview"
+    )
+    
+    hibernada = models.BooleanField(
+        _("Hibernada"),
+        default=False,
+        help_text="Indica si está en modo hibernación"
+    )
+    
+    # Modelo cargado en memoria
+    modelo_cargado = models.CharField(
+        _("Modelo cargado"),
+        max_length=20,
+        choices=[
+            ('piezas', 'Modelo de Piezas'),
+            ('defectos', 'Modelo de Defectos'),
+            ('ninguno', 'Ninguno'),
+        ],
+        default='ninguno',
+        help_text="Modelo ONNX actualmente cargado en memoria"
+    )
+    
+    # Frame rate actual
+    frame_rate_actual = models.IntegerField(
+        _("Frame rate actual (FPS)"),
+        default=5,
+        validators=[MinValueValidator(1), MaxValueValidator(30)],
+        help_text="Cuadros por segundo del preview"
+    )
+    
+    # Timestamps
+    ultimo_uso = models.DateTimeField(
+        _("Último uso"),
+        auto_now=True,
+        help_text="Última vez que se usó la cámara"
+    )
+    
+    ultima_actualizacion = models.DateTimeField(
+        _("Última actualización"),
+        auto_now=True,
+        help_text="Última actualización del estado"
+    )
+    
+    class Meta:
+        verbose_name = _("Estado de Cámara")
+        verbose_name_plural = _("Estado de Cámara")
+    
+    def __str__(self):
+        estado = "Activa" if self.activa else "Inactiva"
+        if self.hibernada:
+            estado = "Hibernada"
+        elif self.en_preview:
+            estado = f"Preview {self.frame_rate_actual} FPS"
+        return f"Cámara: {estado} - Modelo: {self.get_modelo_cargado_display()}"
+    
+    def save(self, *args, **kwargs):
+        # Garantizar singleton
+        self.singleton_id = True
+        super().save(*args, **kwargs)
+    
+    @classmethod
+    def get_estado(cls):
+        """Obtener o crear el estado de la cámara (singleton)"""
+        estado, created = cls.objects.get_or_create(singleton_id=True)
+        return estado
 
 
 # Importar modelos de resultados de segmentación

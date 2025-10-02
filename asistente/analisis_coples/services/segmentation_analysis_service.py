@@ -221,19 +221,17 @@ class SegmentationAnalysisService:
             
             if imagen_procesada is not None:
                 try:
-                    # Guardar imagen en media
+                    # Codificar imagen
                     _, buffer = cv2.imencode('.jpg', imagen_procesada)
                     imagen_bytes = buffer.tobytes()
                     
                     # Nombre del archivo
                     nombre_archivo = f"analisis_{id_analisis}.jpg"
                     
-                    # Guardar en el campo archivo_imagen
-                    analisis_db.archivo_imagen.save(
-                        nombre_archivo,
-                        ContentFile(imagen_bytes),
-                        save=False
-                    )
+                    # Guardar usando ContentFile directamente
+                    from django.core.files.base import ContentFile
+                    analisis_db.archivo_imagen = ContentFile(imagen_bytes, name=nombre_archivo)
+                    
                     logger.info(f"💾 Imagen procesada guardada: {nombre_archivo}")
                     
                 except Exception as e:

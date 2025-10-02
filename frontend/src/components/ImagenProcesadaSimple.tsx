@@ -27,12 +27,13 @@ const ImagenProcesadaSimple: React.FC<ImagenProcesadaSimpleProps> = ({
         const analisis = await analisisAPI.getAnalisisById(analisisId);
         
         console.log(`📦 Analysis response:`, analisis);
+        console.log(`📷 archivo_imagen:`, analisis.archivo_imagen);
+        console.log(`🔗 imagen_procesada_url:`, analisis.imagen_procesada_url);
         
-        if (analisis.archivo_imagen) {
-          // archivo_imagen es la ruta relativa, agregar el dominio del servidor
-          const fullUrl = `http://localhost:8000${analisis.archivo_imagen}`;
-          setImageUrl(fullUrl);
-          console.log(`✅ Image URL set:`, fullUrl);
+        if (analisis.imagen_procesada_url) {
+          // Usar la URL completa construida por el serializer
+          setImageUrl(analisis.imagen_procesada_url);
+          console.log(`✅ Image URL set:`, analisis.imagen_procesada_url);
         } else {
           throw new Error('No hay imagen procesada disponible');
         }

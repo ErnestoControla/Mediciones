@@ -100,7 +100,8 @@ export interface AnalisisCople {
   id_analisis: string;
   timestamp_captura: string;
   timestamp_procesamiento: string;
-  tipo_analisis: 'completo' | 'clasificacion' | 'deteccion_piezas' | 'deteccion_defectos' | 'segmentacion_defectos' | 'segmentacion_piezas';
+  tipo_analisis: 'completo' | 'clasificacion' | 'deteccion_piezas' | 'deteccion_defectos' | 'segmentacion_defectos' | 'segmentacion_piezas' | 'medicion_piezas' | 'medicion_defectos';
+  tipo_analisis_display?: string;
   estado: 'procesando' | 'completado' | 'error';
   usuario: number;
   usuario_nombre: string;
@@ -108,10 +109,12 @@ export interface AnalisisCople {
   configuracion_nombre: string;
   archivo_imagen: string;
   archivo_json: string;
+  imagen_procesada_url: string | null;
   resolucion_ancho: number;
   resolucion_alto: number;
   resolucion_canales: number;
   tiempos: TiemposProcesamiento;
+  tiempo_total_ms: number;
   metadatos_json: any;
   mensaje_error: string;
   resultado_clasificacion?: ResultadoClasificacion;

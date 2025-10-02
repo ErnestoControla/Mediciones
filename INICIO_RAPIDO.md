@@ -2,19 +2,34 @@
 
 ## 🔄 **DESPUÉS DE REINICIAR EL EQUIPO**
 
-### **Paso 1: Iniciar PostgreSQL**
+### **Método Recomendado: Todo Containerizado (Docker)** 🐳
 
+```bash
+cd /home/ernesto/Documentos/Proyectos/Mediciones
+docker-compose -f asistente/docker-compose.local.yml up -d
+```
+
+**Esto inicia TODO:**
+- ✅ PostgreSQL
+- ✅ Django (Backend)
+- ✅ Frontend (React)
+- ✅ Mailpit (Email local)
+
+**Espera ~30 segundos** y todos los servicios estarán listos.
+
+---
+
+### **Método Alternativo: Desarrollo Local** ⚡
+
+Solo si necesitas desarrollo con hot-reload inmediato:
+
+**Paso 1: PostgreSQL**
 ```bash
 cd /home/ernesto/Documentos/Proyectos/Mediciones
 ./start.sh
 ```
 
-Este script inicia PostgreSQL en Docker y te muestra las instrucciones para los siguientes pasos.
-
----
-
-### **Paso 2: Iniciar Backend (Terminal 1)**
-
+**Paso 2: Backend (Terminal 1)**
 ```bash
 conda activate sapera_django
 cd /home/ernesto/Documentos/Proyectos/Mediciones/asistente
@@ -22,18 +37,11 @@ export DJANGO_READ_DOT_ENV_FILE=True
 python manage.py runserver
 ```
 
-**Espera a ver:** `Starting development server at http://127.0.0.1:8000/`
-
----
-
-### **Paso 3: Iniciar Frontend (Terminal 2)**
-
+**Paso 3: Frontend (Terminal 2)**
 ```bash
 cd /home/ernesto/Documentos/Proyectos/Mediciones/frontend
 npm run dev
 ```
-
-**Espera a ver:** `Local: http://localhost:5173/`
 
 ---
 
@@ -50,8 +58,14 @@ Una vez que todo esté corriendo:
 
 ## 🛑 **DETENER TODO:**
 
+### **Si usas Docker (Recomendado):**
 ```bash
 cd /home/ernesto/Documentos/Proyectos/Mediciones
+docker-compose -f asistente/docker-compose.local.yml down
+```
+
+### **Si usas desarrollo local:**
+```bash
 ./stop.sh
 ```
 

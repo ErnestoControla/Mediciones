@@ -5,10 +5,11 @@ import Layout from './components/Layout';
 import NotFound from './pages/NotFound';
 import HomePage from './pages/HomePage';
 import Usuarios from './pages/Usuarios';
-import Roles from './pages/Roles';              // ← Importa tu página de Roles
+import Roles from './pages/Roles';
 import AnalisisCoples from './pages/AnalisisCoples';
 import ConfiguracionesAnalisis from './pages/ConfiguracionesAnalisis';
 import DetalleAnalisis from './pages/DetalleAnalisis';
+import ControlCamara from './pages/ControlCamara';
 import AdminRoute from './components/AdminRoute';
 import PrivateRoute from './components/PrivateRoute';
 
@@ -34,6 +35,7 @@ function App() {
             }
           />
           {/* Rutas del sistema de análisis de coples */}
+          <Route path="/camara" element={<ControlCamara />} />
           <Route path="/analisis" element={<AnalisisCoples />} />
           <Route path="/analisis/configuraciones" element={<ConfiguracionesAnalisis />} />
           <Route path="/analisis/:id" element={<DetalleAnalisis />} />

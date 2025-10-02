@@ -5,17 +5,23 @@ Flujo simplificado:
 1. Capturar imagen desde CameraService
 2. Ejecutar segmentación (piezas o defectos)
 3. Calcular mediciones geométricas
-4. Guardar en BD
+4. Generar imagen procesada con máscaras
+5. Guardar en BD
 """
 
 import logging
 import time
 import uuid
-from typing import Dict, Any, Optional
+import os
+import cv2
+import numpy as np
+from typing import Dict, Any, Optional, List
 from datetime import datetime
 
 from django.utils import timezone
 from django.contrib.auth import get_user_model
+from django.conf import settings
+from django.core.files.base import ContentFile
 
 from ..models import ConfiguracionSistema, AnalisisCople
 from ..resultados_models import SegmentacionPieza, SegmentacionDefecto
@@ -209,7 +215,33 @@ class SegmentationAnalysisService:
                 # Guardar segmentaciones con mediciones
                 self._guardar_segmentaciones_defectos(analisis_db, segmentaciones, config)
             
-            # 8. Actualizar registro
+            # 8. Generar y guardar imagen procesada con máscaras
+            logger.info("🖼️  Generando imagen procesada...")
+            imagen_procesada = self._generar_imagen_procesada(imagen, segmentaciones, tipo_analisis)
+            
+            if imagen_procesada is not None:
+                try:
+                    # Guardar imagen en media
+                    _, buffer = cv2.imencode('.jpg', imagen_procesada)
+                    imagen_bytes = buffer.tobytes()
+                    
+                    # Nombre del archivo
+                    nombre_archivo = f"analisis_{id_analisis}.jpg"
+                    
+                    # Guardar en el campo archivo_imagen
+                    analisis_db.archivo_imagen.save(
+                        nombre_archivo,
+                        ContentFile(imagen_bytes),
+                        save=False
+                    )
+                    logger.info(f"💾 Imagen procesada guardada: {nombre_archivo}")
+                    
+                except Exception as e:
+                    logger.error(f"❌ Error guardando imagen procesada: {e}", exc_info=True)
+            else:
+                logger.warning("⚠️ No se pudo generar imagen procesada")
+            
+            # 9. Actualizar registro
             analisis_db.tiempo_total_ms = (time.time() - inicio_seg) * 1000
             analisis_db.estado = 'completado'
             analisis_db.save()
@@ -353,6 +385,101 @@ class SegmentationAnalysisService:
             )
         
         logger.info(f"✅ {len(segmentaciones)} segmentaciones de defectos guardadas")
+    
+    def _generar_imagen_procesada(
+        self,
+        imagen: np.ndarray,
+        segmentaciones: list,
+        tipo_analisis: str
+    ) -> Optional[np.ndarray]:
+        """
+        Genera imagen procesada con máscaras dibujadas.
+        
+        Args:
+            imagen: Imagen original
+            segmentaciones: Lista de segmentaciones con máscaras
+            tipo_analisis: Tipo de análisis para el color
+            
+        Returns:
+            Imagen con máscaras dibujadas o None si falla
+        """
+        try:
+            if not segmentaciones:
+                logger.warning("No hay segmentaciones para visualizar")
+                return None
+            
+            # Copiar imagen para no modificar la original
+            imagen_vis = imagen.copy()
+            
+            # Definir color según tipo
+            if tipo_analisis == 'medicion_piezas':
+                color_base = (0, 255, 0)  # Verde para piezas
+            else:
+                color_base = (0, 0, 255)  # Rojo para defectos
+            
+            logger.info(f"🎨 Dibujando {len(segmentaciones)} máscaras en imagen...")
+            
+            # Dibujar cada máscara
+            for idx, seg in enumerate(segmentaciones):
+                mascara = seg.get('mascara')
+                bbox = seg.get('bbox', {})
+                
+                if mascara is None:
+                    continue
+                
+                # Convertir máscara a numpy si es necesario
+                if not isinstance(mascara, np.ndarray):
+                    mascara = np.array(mascara, dtype=np.float32)
+                
+                # Redimensionar si es necesario
+                if mascara.shape != imagen.shape[:2]:
+                    mascara = cv2.resize(mascara, (imagen.shape[1], imagen.shape[0]))
+                
+                # Binarizar máscara
+                mascara_binaria = (mascara > 0.5).astype(np.uint8)
+                
+                # Verificar píxeles activos
+                pixels_activos = np.sum(mascara_binaria)
+                if pixels_activos == 0:
+                    logger.warning(f"  ⚠️ Máscara {idx}: Sin píxeles activos")
+                    continue
+                
+                logger.info(f"  ✅ Máscara {idx}: {pixels_activos} píxeles activos")
+                
+                # Crear overlay con transparencia
+                overlay = imagen_vis.copy()
+                overlay[mascara_binaria > 0] = color_base
+                
+                # Combinar con transparencia (alpha=0.4)
+                cv2.addWeighted(overlay, 0.4, imagen_vis, 0.6, 0, imagen_vis)
+                
+                # Dibujar contorno de la máscara
+                contornos, _ = cv2.findContours(mascara_binaria, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+                cv2.drawContours(imagen_vis, contornos, -1, color_base, 2)
+                
+                # Dibujar bounding box si existe
+                if bbox:
+                    x1, y1 = int(bbox.get('x1', 0)), int(bbox.get('y1', 0))
+                    x2, y2 = int(bbox.get('x2', 0)), int(bbox.get('y2', 0))
+                    cv2.rectangle(imagen_vis, (x1, y1), (x2, y2), color_base, 2)
+                    
+                    # Agregar etiqueta
+                    clase = seg.get('clase', 'Objeto')
+                    confianza = seg.get('confianza', 0.0)
+                    etiqueta = f"{clase}: {confianza:.2f}"
+                    
+                    # Fondo para el texto
+                    (tw, th), _ = cv2.getTextSize(etiqueta, cv2.FONT_HERSHEY_SIMPLEX, 0.6, 2)
+                    cv2.rectangle(imagen_vis, (x1, y1 - th - 10), (x1 + tw, y1), color_base, -1)
+                    cv2.putText(imagen_vis, etiqueta, (x1, y1 - 5), 
+                               cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2)
+            
+            logger.info(f"✅ Imagen procesada generada: {imagen_vis.shape}")
+            return imagen_vis
+            
+        except Exception as e:
+            logger.error(f"❌ Error generando imagen procesada: {e}", exc_info=True)
+            return None
 
 
 # Instancia singleton

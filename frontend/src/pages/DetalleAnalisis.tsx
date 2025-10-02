@@ -31,7 +31,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { analisisAPI } from '../api/analisis';
 import type { AnalisisCople } from '../api/analisis';
 import dayjs from 'dayjs';
-import ImagenProcesada from '../components/ImagenProcesada';
+import ImagenProcesadaSimple from '../components/ImagenProcesadaSimple';
 
 const DetalleAnalisis: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -392,7 +392,7 @@ const DetalleAnalisis: React.FC = () => {
                 avatar={<Image />}
               />
               <CardContent>
-                <ImagenProcesada 
+                <ImagenProcesadaSimple 
                   analisisId={analisis.id} 
                   showThumbnail={false}
                 />

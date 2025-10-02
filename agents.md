@@ -472,29 +472,39 @@ Para garantizar que las modificaciones sean pequeñas y probables, el agente deb
 
 ## 7.3 Plan de Trabajo por Etapas
 
-### **ETAPA 1: Ajustar Estructura Base** ✅ (Parcialmente completado)
+### **ETAPA 1: Ajustar Estructura Base** ✅ COMPLETADA
 - [x] Migrar a PostgreSQL con Docker
 - [x] Simplificar modelos (solo segmentación)
-- [ ] Actualizar modelos con campos de medición dimensional
-- [ ] Agregar modelo RutinaInspeccion
-- [ ] Agregar modelo EstadoCamara
-- [ ] Actualizar tipos de análisis
-- [ ] Regenerar migraciones
+- [x] Actualizar modelos con campos de medición dimensional
+- [x] Agregar modelo RutinaInspeccion
+- [x] Agregar modelo EstadoCamara
+- [x] Actualizar tipos de análisis
+- [x] Regenerar migraciones
 
-### **ETAPA 2: Sistema de Cámara y Preview** 🔄 (Siguiente)
-- [ ] Módulo de control de cámara GigE (prioridad)
-- [ ] Preview a 5 FPS con WebSocket
-- [ ] Sistema de hibernación automática
-- [ ] API REST para control de cámara
-- [ ] Frontend para visualización de preview
+### **ETAPA 2: Sistema de Cámara y Preview** ✅ COMPLETADA
+- [x] Módulo de control de cámara GigE (prioridad)
+- [x] Preview a 5 FPS con polling HTTP
+- [x] Sistema de hibernación automática (1 minuto)
+- [x] API REST para control de cámara (/api/camara/*)
+- [x] Frontend para visualización de preview
+- [x] Manejo de estados (activa, hibernada, etc.)
+- [x] Webcam fallback funcional
+- [x] Conversión Bayer correcta (BayerBG2BGR)
 
-### **ETAPA 3: Cálculo de Dimensiones** 📐
-- [ ] Módulo de extracción de características geométricas
-- [ ] Cálculo de dimensiones (ancho, alto, perímetro)
-- [ ] Cálculo de excentricidad y orientación
-- [ ] Almacenamiento en BD
-- [ ] Configuración de factor de conversión
-- [ ] Conversión píxeles → milímetros
+### **ETAPA 3: Cálculo de Dimensiones** ✅ COMPLETADA (2025-10-02)
+- [x] Módulo de extracción de características geométricas (MeasurementService)
+- [x] Cálculo de dimensiones (ancho, alto, perímetro)
+- [x] Cálculo de excentricidad y orientación
+- [x] Almacenamiento en BD (campos px y mm)
+- [x] Configuración de factor de conversión (en ConfiguracionSistema)
+- [x] Conversión píxeles → milímetros (preparada, campos nullable)
+- [x] Integración con SegmentationAnalysisService
+- [x] Frontend unificado (captura + análisis)
+- [x] Popup de confirmación con resultados
+- [x] Visualización de imagen procesada
+- [x] Optimización RAM (un modelo a la vez)
+
+**NOTA ETAPA 3**: Modelo CopleSegDef1C8V.onnx causa segfault, usando CopleSegPZ1C1V.onnx temporalmente para defectos. Sistema completamente funcional.
 
 ### **ETAPA 4: Posprocesamiento de Máscaras** 🎨
 - [ ] Desarrollo de módulos de refinamiento

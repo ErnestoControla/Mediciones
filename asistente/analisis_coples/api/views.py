@@ -197,30 +197,37 @@ class AnalisisCopleViewSet(viewsets.ReadOnlyModelViewSet):
                 count = self.get_queryset().filter(tipo_analisis=tipo).count()
                 stats_por_tipo[tipo] = count
             
-            # Estadísticas de clasificación
-            total_aceptados = 0
-            total_rechazados = 0
+            # Estadísticas de segmentación
+            total_defectos = 0
+            total_piezas = 0
             confianza_promedio = 0.0
             
-            analisis_con_clasificacion = self.get_queryset().filter(
-                estado='completado',
-                resultado_clasificacion__isnull=False
-            )
+            analisis_completados = self.get_queryset().filter(estado='completado')
             
-            if analisis_con_clasificacion.exists():
-                total_aceptados = analisis_con_clasificacion.filter(
-                    resultado_clasificacion__clase_predicha='Aceptado'
-                ).count()
-                total_rechazados = analisis_con_clasificacion.filter(
-                    resultado_clasificacion__clase_predicha='Rechazado'
+            if analisis_completados.exists():
+                # Contar defectos y piezas
+                from ..resultados_models import SegmentacionDefecto, SegmentacionPieza
+                
+                total_defectos = SegmentacionDefecto.objects.filter(
+                    analisis__in=analisis_completados
                 ).count()
                 
-                # Calcular confianza promedio
-                confianzas = analisis_con_clasificacion.values_list(
-                    'resultado_clasificacion__confianza', flat=True
-                )
-                if confianzas:
-                    confianza_promedio = sum(confianzas) / len(confianzas)
+                total_piezas = SegmentacionPieza.objects.filter(
+                    analisis__in=analisis_completados
+                ).count()
+                
+                # Calcular confianza promedio de segmentaciones
+                confianzas_defectos = SegmentacionDefecto.objects.filter(
+                    analisis__in=analisis_completados
+                ).values_list('confianza', flat=True)
+                
+                confianzas_piezas = SegmentacionPieza.objects.filter(
+                    analisis__in=analisis_completados
+                ).values_list('confianza', flat=True)
+                
+                todas_confianzas = list(confianzas_defectos) + list(confianzas_piezas)
+                if todas_confianzas:
+                    confianza_promedio = sum(todas_confianzas) / len(todas_confianzas)
             
             return Response({
                 'sistema': stats_sistema,
@@ -231,12 +238,14 @@ class AnalisisCopleViewSet(viewsets.ReadOnlyModelViewSet):
                     'tasa_exito': (analisis_exitosos / total_analisis * 100) if total_analisis > 0 else 0
                 },
                 'por_tipo': stats_por_tipo,
-                'clasificacion': {
-                    'total_aceptados': total_aceptados,
-                    'total_rechazados': total_rechazados,
+                'segmentacion': {
+                    'total_defectos': total_defectos,
+                    'total_piezas': total_piezas,
                     'confianza_promedio': confianza_promedio,
-                    'tasa_aceptacion': (total_aceptados / (total_aceptados + total_rechazados) * 100) 
-                                      if (total_aceptados + total_rechazados) > 0 else 0
+                    'promedio_por_analisis': {
+                        'defectos': (total_defectos / analisis_exitosos) if analisis_exitosos > 0 else 0,
+                        'piezas': (total_piezas / analisis_exitosos) if analisis_exitosos > 0 else 0
+                    }
                 }
             })
             

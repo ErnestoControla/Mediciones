@@ -17,6 +17,7 @@ from analisis_coples.api.views import (
     SistemaControlViewSet
 )
 from analisis_coples.api import image_views
+from analisis_coples.api.camera_views import CamaraControlViewSet
 
 # Seleccionamos DefaultRouter en DEBUG para endpoint raiz y SimpleRouter en producción
 router = DefaultRouter() if settings.DEBUG else SimpleRouter()
@@ -30,6 +31,9 @@ router.register(r"analisis/configuraciones", ConfiguracionSistemaViewSet, basena
 router.register(r"analisis/resultados", AnalisisCopleViewSet, basename="analisis")
 router.register(r"analisis/estadisticas", EstadisticasSistemaViewSet, basename="estadisticas")
 router.register(r"analisis/sistema", SistemaControlViewSet, basename="sistema")
+
+# API de control de cámara
+router.register(r"camara", CamaraControlViewSet, basename="camara")
 
 app_name = "api"
 urlpatterns = [

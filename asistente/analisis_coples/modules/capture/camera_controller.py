@@ -16,11 +16,19 @@ import os
 # Importar configuración
 from analisis_coples.expo_config import CameraConfig, StatsConfig, GlobalConfig
 
-# Obtener el código de soporte común para el GigE-V Framework
+# Obtener el código de soporte común para el GigE-V Framework (opcional)
 sys.path.append("../gigev_common")
 
-import pygigev
-from pygigev import GevPixelFormats as GPF
+# Importación condicional de pygigev (solo disponible con Sapera SDK)
+try:
+    import pygigev
+    from pygigev import GevPixelFormats as GPF
+    PYGIGEV_AVAILABLE = True
+except ImportError:
+    pygigev = None
+    GPF = None
+    PYGIGEV_AVAILABLE = False
+    print("⚠️ pygigev no disponible - Cámara GigE no funcionará (usar webcam como fallback)")
 
 
 class CamaraTiempoOptimizada:
@@ -94,6 +102,11 @@ class CamaraTiempoOptimizada:
         Returns:
             bool: True si la configuración fue exitosa
         """
+        # Verificar que pygigev esté disponible
+        if not PYGIGEV_AVAILABLE:
+            print("❌ pygigev no disponible - no se puede usar cámara GigE")
+            return False
+        
         try:
             # Inicializar API GigE
             pygigev.GevApiInitialize()

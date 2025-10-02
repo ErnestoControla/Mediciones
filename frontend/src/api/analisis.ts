@@ -225,8 +225,8 @@ export const analisisAPI = {
 
   // Imágenes procesadas
   getImagenProcesada: (analisisId: number): Promise<{image_data: string, analisis_id: string, timestamp: string}> =>
-    API.get(`analisis/${analisisId}/imagen_procesada/`).then(res => res.data),
+    API.get(`analisis/resultados/${analisisId}/imagen_procesada/`).then(res => res.data),
 
   getMiniaturaAnalisis: (analisisId: number): Promise<{thumbnail_data: string, analisis_id: string}> =>
-    API.get(`analisis/${analisisId}/miniatura/`).then(res => res.data),
+    API.get(`analisis/resultados/${analisisId}/miniatura/`).then(res => res.data),
 };

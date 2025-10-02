@@ -192,11 +192,16 @@ class AnalisisCopleSerializer(serializers.ModelSerializer):
     
     def get_imagen_procesada_url(self, obj):
         """Retorna la URL de la imagen procesada si existe"""
-        if obj.archivo_imagen:
-            request = self.context.get('request')
-            if request:
-                return request.build_absolute_uri(obj.archivo_imagen.url)
-            return obj.archivo_imagen.url
+        # Verificar que archivo_imagen existe y no es un string vacío
+        if obj.archivo_imagen and hasattr(obj.archivo_imagen, 'url'):
+            try:
+                request = self.context.get('request')
+                if request:
+                    return request.build_absolute_uri(obj.archivo_imagen.url)
+                return obj.archivo_imagen.url
+            except ValueError:
+                # El archivo no existe en el sistema de archivos
+                return None
         return None
 
 

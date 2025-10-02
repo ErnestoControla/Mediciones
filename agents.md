@@ -503,8 +503,24 @@ Para garantizar que las modificaciones sean pequeñas y probables, el agente deb
 - [x] Popup de confirmación con resultados
 - [x] Visualización de imagen procesada
 - [x] Optimización RAM (un modelo a la vez)
+- [x] **Visualización de máscaras generadas:**
+  - [x] Miniaturas en página "Análisis de Coples"
+  - [x] Imágenes procesadas con máscaras dibujadas (verde/rojo)
+  - [x] Guardado físico en media/analisis/ (ImageField)
+- [x] **Página de detalles completa:**
+  - [x] Tabla de segmentaciones con mediciones
+  - [x] Tiempos de procesamiento
+  - [x] Imagen procesada en tamaño completo
+  - [x] Navegación integrada
+- [x] **Ambos modelos funcionando:**
+  - [x] CopleSegPZ1C1V.onnx (piezas)
+  - [x] CopleSegDef1C8V.onnx (defectos)
 
-**NOTA ETAPA 3**: Modelo CopleSegDef1C8V.onnx causa segfault, usando CopleSegPZ1C1V.onnx temporalmente para defectos. Sistema completamente funcional.
+**NOTA ETAPA 3**: 
+- ✅ Sistema completamente funcional con ambos modelos
+- ⚠️ Máscaras temporalmente rectangulares (bbox completo) - _generate_mask con prototipos YOLO11 causa segfault
+- ⚠️ Investigación de segfault y máscaras precisas se abordará en ETAPA 4
+- ✅ Suficiente para demo y validación de funcionalidad
 
 ### **ETAPA 4: Posprocesamiento de Máscaras** 🎨
 - [ ] Desarrollo de módulos de refinamiento

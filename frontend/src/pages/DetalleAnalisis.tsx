@@ -108,19 +108,6 @@ const DetalleAnalisis: React.FC = () => {
     );
   }
 
-  console.log('🎯 Renderizando DetalleAnalisis, analisis:', analisis);
-  console.log('📊 segmentaciones_piezas:', analisis.segmentaciones_piezas);
-  console.log('📊 segmentaciones_defectos:', analisis.segmentaciones_defectos);
-  
-  // Debug: Ver campos del primer defecto
-  if (analisis.segmentaciones_defectos && analisis.segmentaciones_defectos.length > 0) {
-    console.log('🔍 Primer defecto completo:', analisis.segmentaciones_defectos[0]);
-    console.log('📏 mediciones_px completo:', analisis.segmentaciones_defectos[0].mediciones_px);
-    console.log('📐 geometria completo:', analisis.segmentaciones_defectos[0].geometria);
-  }
-  
-  console.log('⏱️ tiempos:', analisis.tiempos);
-  console.log('⏱️ tiempo_total_ms:', analisis.tiempo_total_ms);
   
   return (
     <Box sx={{ p: 3 }}>

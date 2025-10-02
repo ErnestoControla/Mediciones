@@ -22,16 +22,16 @@ import {
 } from '@mui/material';
 import {
   ArrowBack,
-  Download,
   Image,
-  Assessment,
   Schedule,
+  Straighten,
 } from '@mui/icons-material';
 import { useParams, useNavigate } from 'react-router-dom';
 import { analisisAPI } from '../api/analisis';
 import type { AnalisisCople } from '../api/analisis';
 import dayjs from 'dayjs';
 import ImagenProcesadaSimple from '../components/ImagenProcesadaSimple';
+import Layout from '../components/Layout';
 
 const DetalleAnalisis: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -79,12 +79,9 @@ const DetalleAnalisis: React.FC = () => {
 
   const getTipoAnalisisLabel = (tipo: string) => {
     const labels: { [key: string]: string } = {
-      completo: 'Análisis Completo',
-      clasificacion: 'Solo Clasificación',
-      deteccion_piezas: 'Detección de Piezas',
-      deteccion_defectos: 'Detección de Defectos',
-      segmentacion_defectos: 'Segmentación de Defectos',
-      segmentacion_piezas: 'Segmentación de Piezas',
+      medicion_piezas: 'Medición de Piezas',
+      medicion_defectos: 'Medición de Defectos',
+      rutina_inspeccion: 'Rutina de Inspección',
     };
     return labels[tipo] || tipo;
   };
@@ -113,22 +110,23 @@ const DetalleAnalisis: React.FC = () => {
   }
 
   return (
-    <Box>
-      <Box display="flex" alignItems="center" gap={2} mb={3}>
-        <Button
-          startIcon={<ArrowBack />}
-          onClick={() => navigate('/analisis')}
-        >
-          Volver
-        </Button>
-        <Typography variant="h4" component="h1">
-          Detalle del Análisis
-        </Typography>
-      </Box>
+    <Layout>
+      <Box>
+        <Box display="flex" alignItems="center" gap={2} mb={3}>
+          <Button
+            startIcon={<ArrowBack />}
+            onClick={() => navigate('/analisis')}
+          >
+            Volver
+          </Button>
+          <Typography variant="h4" component="h1">
+            Detalle del Análisis
+          </Typography>
+        </Box>
 
-      <Grid container spacing={3}>
+        <Grid container spacing={3}>
         {/* Información General */}
-        <Grid item xs={12} md={8}>
+        <Grid size={{ xs: 12, md: 8 }}>
           <Card>
             <CardHeader
               title={analisis.id_analisis}
@@ -146,19 +144,10 @@ const DetalleAnalisis: React.FC = () => {
                   />
                 </Box>
               }
-              action={
-                <Button
-                  startIcon={<Download />}
-                  variant="outlined"
-                  size="small"
-                >
-                  Descargar
-                </Button>
-              }
             />
             <CardContent>
               <Grid container spacing={2}>
-                <Grid item xs={12} sm={6}>
+                <Grid size={{ xs: 12, sm: 6 }}>
                   <Typography variant="body2" color="text.secondary">
                     Fecha de Captura:
                   </Typography>
@@ -166,7 +155,7 @@ const DetalleAnalisis: React.FC = () => {
                     {dayjs(analisis.timestamp_captura).format('DD/MM/YYYY HH:mm:ss')}
                   </Typography>
                 </Grid>
-                <Grid item xs={12} sm={6}>
+                <Grid size={{ xs: 12, sm: 6 }}>
                   <Typography variant="body2" color="text.secondary">
                     Fecha de Procesamiento:
                   </Typography>
@@ -174,7 +163,7 @@ const DetalleAnalisis: React.FC = () => {
                     {dayjs(analisis.timestamp_procesamiento).format('DD/MM/YYYY HH:mm:ss')}
                   </Typography>
                 </Grid>
-                <Grid item xs={12} sm={6}>
+                <Grid size={{ xs: 12, sm: 6 }}>
                   <Typography variant="body2" color="text.secondary">
                     Usuario:
                   </Typography>
@@ -182,7 +171,7 @@ const DetalleAnalisis: React.FC = () => {
                     {analisis.usuario_nombre}
                   </Typography>
                 </Grid>
-                <Grid item xs={12} sm={6}>
+                <Grid size={{ xs: 12, sm: 6 }}>
                   <Typography variant="body2" color="text.secondary">
                     Configuración:
                   </Typography>
@@ -190,7 +179,7 @@ const DetalleAnalisis: React.FC = () => {
                     {analisis.configuracion_nombre}
                   </Typography>
                 </Grid>
-                <Grid item xs={12} sm={6}>
+                <Grid size={{ xs: 12, sm: 6 }}>
                   <Typography variant="body2" color="text.secondary">
                     Resolución:
                   </Typography>
@@ -198,7 +187,7 @@ const DetalleAnalisis: React.FC = () => {
                     {analisis.resolucion_ancho} x {analisis.resolucion_alto} ({analisis.resolucion_canales} canales)
                   </Typography>
                 </Grid>
-                <Grid item xs={12} sm={6}>
+                <Grid size={{ xs: 12, sm: 6 }}>
                   <Typography variant="body2" color="text.secondary">
                     Tiempo Total:
                   </Typography>
@@ -216,50 +205,13 @@ const DetalleAnalisis: React.FC = () => {
             </CardContent>
           </Card>
 
-          {/* Resultado de Clasificación */}
-          {analisis.resultado_clasificacion && (
+          {/* Segmentaciones de Piezas */}
+          {analisis.segmentaciones_piezas && analisis.segmentaciones_piezas.length > 0 && (
             <Card sx={{ mt: 2 }}>
-              <CardHeader
-                title="Resultado de Clasificación"
-                avatar={<Assessment />}
+              <CardHeader 
+                title="Segmentaciones de Piezas" 
+                avatar={<Straighten />}
               />
-              <CardContent>
-                <Grid container spacing={2}>
-                  <Grid item xs={12} sm={4}>
-                    <Typography variant="body2" color="text.secondary">
-                      Clase Predicha:
-                    </Typography>
-                    <Chip
-                      label={analisis.resultado_clasificacion.clase_predicha}
-                      color={analisis.resultado_clasificacion.clase_predicha === 'Aceptado' ? 'success' : 'error'}
-                      sx={{ mt: 1 }}
-                    />
-                  </Grid>
-                  <Grid item xs={12} sm={4}>
-                    <Typography variant="body2" color="text.secondary">
-                      Confianza:
-                    </Typography>
-                    <Typography variant="h6" sx={{ mt: 1 }}>
-                      {Math.round(analisis.resultado_clasificacion.confianza * 100)}%
-                    </Typography>
-                  </Grid>
-                  <Grid item xs={12} sm={4}>
-                    <Typography variant="body2" color="text.secondary">
-                      Tiempo de Inferencia:
-                    </Typography>
-                    <Typography variant="body1" sx={{ mt: 1 }}>
-                      {formatTiempo(analisis.resultado_clasificacion.tiempo_inferencia_ms)}
-                    </Typography>
-                  </Grid>
-                </Grid>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Detecciones de Piezas */}
-          {analisis.detecciones_piezas.length > 0 && (
-            <Card sx={{ mt: 2 }}>
-              <CardHeader title="Detecciones de Piezas" />
               <CardContent>
                 <TableContainer component={Paper} variant="outlined">
                   <Table size="small">
@@ -267,21 +219,25 @@ const DetalleAnalisis: React.FC = () => {
                       <TableRow>
                         <TableCell>Clase</TableCell>
                         <TableCell>Confianza</TableCell>
-                        <TableCell>Centroide</TableCell>
-                        <TableCell>Área</TableCell>
+                        <TableCell>BBox (px)</TableCell>
+                        <TableCell>Área Máscara (px²)</TableCell>
+                        <TableCell>Perímetro (px)</TableCell>
+                        <TableCell>Excentricidad</TableCell>
                       </TableRow>
                     </TableHead>
                     <TableBody>
-                      {analisis.detecciones_piezas.map((pieza, index) => (
+                      {analisis.segmentaciones_piezas.map((pieza, index) => (
                         <TableRow key={index}>
                           <TableCell>{pieza.clase}</TableCell>
                           <TableCell>
                             {Math.round(pieza.confianza * 100)}%
                           </TableCell>
                           <TableCell>
-                            ({pieza.centroide.x}, {pieza.centroide.y})
+                            {pieza.ancho_bbox_px?.toFixed(0)} x {pieza.alto_bbox_px?.toFixed(0)}
                           </TableCell>
-                          <TableCell>{pieza.area}</TableCell>
+                          <TableCell>{pieza.area_mascara_px?.toFixed(0)}</TableCell>
+                          <TableCell>{pieza.perimetro_mascara_px?.toFixed(0)}</TableCell>
+                          <TableCell>{pieza.excentricidad?.toFixed(2)}</TableCell>
                         </TableRow>
                       ))}
                     </TableBody>
@@ -291,10 +247,13 @@ const DetalleAnalisis: React.FC = () => {
             </Card>
           )}
 
-          {/* Detecciones de Defectos */}
-          {analisis.detecciones_defectos.length > 0 && (
+          {/* Segmentaciones de Defectos */}
+          {analisis.segmentaciones_defectos && analisis.segmentaciones_defectos.length > 0 && (
             <Card sx={{ mt: 2 }}>
-              <CardHeader title="Detecciones de Defectos" />
+              <CardHeader 
+                title="Segmentaciones de Defectos" 
+                avatar={<Straighten />}
+              />
               <CardContent>
                 <TableContainer component={Paper} variant="outlined">
                   <Table size="small">
@@ -302,21 +261,25 @@ const DetalleAnalisis: React.FC = () => {
                       <TableRow>
                         <TableCell>Clase</TableCell>
                         <TableCell>Confianza</TableCell>
-                        <TableCell>Centroide</TableCell>
-                        <TableCell>Área</TableCell>
+                        <TableCell>BBox (px)</TableCell>
+                        <TableCell>Área Máscara (px²)</TableCell>
+                        <TableCell>Perímetro (px)</TableCell>
+                        <TableCell>Excentricidad</TableCell>
                       </TableRow>
                     </TableHead>
                     <TableBody>
-                      {analisis.detecciones_defectos.map((defecto, index) => (
+                      {analisis.segmentaciones_defectos.map((defecto, index) => (
                         <TableRow key={index}>
                           <TableCell>{defecto.clase}</TableCell>
                           <TableCell>
                             {Math.round(defecto.confianza * 100)}%
                           </TableCell>
                           <TableCell>
-                            ({defecto.centroide.x}, {defecto.centroide.y})
+                            {defecto.ancho_bbox_px?.toFixed(0)} x {defecto.alto_bbox_px?.toFixed(0)}
                           </TableCell>
-                          <TableCell>{defecto.area}</TableCell>
+                          <TableCell>{defecto.area_mascara_px?.toFixed(0)}</TableCell>
+                          <TableCell>{defecto.perimetro_mascara_px?.toFixed(0)}</TableCell>
+                          <TableCell>{defecto.excentricidad?.toFixed(2)}</TableCell>
                         </TableRow>
                       ))}
                     </TableBody>
@@ -328,7 +291,7 @@ const DetalleAnalisis: React.FC = () => {
         </Grid>
 
         {/* Panel Lateral */}
-        <Grid item xs={12} md={4}>
+        <Grid size={{ xs: 12, md: 4 }}>
           {/* Tiempos de Procesamiento */}
           <Card>
             <CardHeader
@@ -340,39 +303,25 @@ const DetalleAnalisis: React.FC = () => {
                 <Box display="flex" justifyContent="space-between">
                   <Typography variant="body2">Captura:</Typography>
                   <Typography variant="body2">
-                    {formatTiempo(analisis.tiempos.captura_ms)}
+                    {formatTiempo(analisis.tiempos.captura_ms || 0)}
                   </Typography>
                 </Box>
-                <Box display="flex" justifyContent="space-between">
-                  <Typography variant="body2">Clasificación:</Typography>
-                  <Typography variant="body2">
-                    {formatTiempo(analisis.tiempos.clasificacion_ms)}
-                  </Typography>
-                </Box>
-                <Box display="flex" justifyContent="space-between">
-                  <Typography variant="body2">Detección Piezas:</Typography>
-                  <Typography variant="body2">
-                    {formatTiempo(analisis.tiempos.deteccion_piezas_ms)}
-                  </Typography>
-                </Box>
-                <Box display="flex" justifyContent="space-between">
-                  <Typography variant="body2">Detección Defectos:</Typography>
-                  <Typography variant="body2">
-                    {formatTiempo(analisis.tiempos.deteccion_defectos_ms)}
-                  </Typography>
-                </Box>
-                <Box display="flex" justifyContent="space-between">
-                  <Typography variant="body2">Segmentación Defectos:</Typography>
-                  <Typography variant="body2">
-                    {formatTiempo(analisis.tiempos.segmentacion_defectos_ms)}
-                  </Typography>
-                </Box>
-                <Box display="flex" justifyContent="space-between">
-                  <Typography variant="body2">Segmentación Piezas:</Typography>
-                  <Typography variant="body2">
-                    {formatTiempo(analisis.tiempos.segmentacion_piezas_ms)}
-                  </Typography>
-                </Box>
+                {analisis.tiempos.segmentacion_piezas_ms > 0 && (
+                  <Box display="flex" justifyContent="space-between">
+                    <Typography variant="body2">Segmentación Piezas:</Typography>
+                    <Typography variant="body2">
+                      {formatTiempo(analisis.tiempos.segmentacion_piezas_ms)}
+                    </Typography>
+                  </Box>
+                )}
+                {analisis.tiempos.segmentacion_defectos_ms > 0 && (
+                  <Box display="flex" justifyContent="space-between">
+                    <Typography variant="body2">Segmentación Defectos:</Typography>
+                    <Typography variant="body2">
+                      {formatTiempo(analisis.tiempos.segmentacion_defectos_ms)}
+                    </Typography>
+                  </Box>
+                )}
                 <Divider sx={{ my: 1 }} />
                 <Box display="flex" justifyContent="space-between">
                   <Typography variant="body1" fontWeight="bold">Total:</Typography>
@@ -401,7 +350,8 @@ const DetalleAnalisis: React.FC = () => {
           )}
         </Grid>
       </Grid>
-    </Box>
+      </Box>
+    </Layout>
   );
 };
 

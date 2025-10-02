@@ -198,13 +198,26 @@ class SegmentadorDefectosCoples:
             tiempo_inicio = time.time()
             
             try:
+                print("🧠 Ejecutando inferencia ONNX...")
+                print(f"   Input name: {self.input_name}")
+                print(f"   Output names: {self.output_names}")
+                print(f"   Input shape: {imagen_input.shape}")
+                
                 outputs = self.session.run(
                     self.output_names,
                     {self.input_name: imagen_input}
                 )
-                print("✅ Inferencia ONNX exitosa")
+                
+                print(f"✅ Inferencia ONNX exitosa: {len(outputs)} outputs")
+                if len(outputs) > 0:
+                    print(f"   Output 0 shape: {outputs[0].shape}")
+                if len(outputs) > 1:
+                    print(f"   Output 1 shape: {outputs[1].shape}")
+                    
             except Exception as e:
                 print(f"⚠️ Error en inferencia ONNX: {e}, usando fallback")
+                import traceback
+                traceback.print_exc()
                 # Crear outputs de fallback
                 outputs = [
                     np.zeros((1, 37, 8400), dtype=np.float32),  # Detections

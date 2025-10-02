@@ -41,8 +41,14 @@ class SegmentationAnalysisService:
         self.measurement_service = get_measurement_service()
         self.camera_service = get_camera_service()
     
-    def _inicializar_segmentadores(self):
-        """Inicializa los segmentadores si no están cargados"""
+    def _inicializar_segmentador(self, tipo: str):
+        """
+        Inicializa un segmentador específico y libera el otro para ahorrar RAM.
+        Solo mantiene un modelo ONNX cargado a la vez.
+        
+        Args:
+            tipo: 'piezas' o 'defectos'
+        """
         import sys
         import os
         
@@ -55,23 +61,39 @@ class SegmentationAnalysisService:
         from modules.segmentation.segmentation_piezas_engine import SegmentadorPiezasCoples
         from modules.segmentation.segmentation_defectos_engine import SegmentadorDefectosCoples
         
-        # Inicializar segmentador de piezas si no existe
-        if self.segmentador_piezas is None:
-            logger.info("🎯 Inicializando segmentador de piezas...")
-            self.segmentador_piezas = SegmentadorPiezasCoples()
-            if not self.segmentador_piezas.stats['inicializado']:
-                logger.error("❌ Error inicializando segmentador de piezas")
-                return False
-            logger.info("✅ Segmentador de piezas listo")
+        if tipo == 'piezas':
+            # Liberar segmentador de defectos si existe
+            if self.segmentador_defectos is not None:
+                logger.info("🔄 Liberando segmentador de defectos para cargar piezas...")
+                if hasattr(self.segmentador_defectos, 'liberar'):
+                    self.segmentador_defectos.liberar()
+                self.segmentador_defectos = None
+            
+            # Inicializar segmentador de piezas si no existe
+            if self.segmentador_piezas is None:
+                logger.info("🎯 Inicializando segmentador de piezas...")
+                self.segmentador_piezas = SegmentadorPiezasCoples()
+                if not self.segmentador_piezas.stats['inicializado']:
+                    logger.error("❌ Error inicializando segmentador de piezas")
+                    return False
+                logger.info("✅ Segmentador de piezas listo")
         
-        # Inicializar segmentador de defectos si no existe
-        if self.segmentador_defectos is None:
-            logger.info("🎯 Inicializando segmentador de defectos...")
-            self.segmentador_defectos = SegmentadorDefectosCoples()
-            if not self.segmentador_defectos._inicializar_modelo():
-                logger.error("❌ Error inicializando segmentador de defectos")
-                return False
-            logger.info("✅ Segmentador de defectos listo")
+        elif tipo == 'defectos':
+            # Liberar segmentador de piezas si existe
+            if self.segmentador_piezas is not None:
+                logger.info("🔄 Liberando segmentador de piezas para cargar defectos...")
+                if hasattr(self.segmentador_piezas, 'liberar'):
+                    self.segmentador_piezas.liberar()
+                self.segmentador_piezas = None
+            
+            # Inicializar segmentador de defectos si no existe
+            if self.segmentador_defectos is None:
+                logger.info("🎯 Inicializando segmentador de defectos...")
+                self.segmentador_defectos = SegmentadorDefectosCoples()
+                if not self.segmentador_defectos._inicializar_modelo():
+                    logger.error("❌ Error inicializando segmentador de defectos")
+                    return False
+                logger.info("✅ Segmentador de defectos listo")
         
         return True
     
@@ -100,9 +122,10 @@ class SegmentationAnalysisService:
                     'error': 'No hay cámara inicializada. Inicializa la cámara primero.'
                 }
             
-            # 2. Inicializar segmentadores
-            if not self._inicializar_segmentadores():
-                return {'error': 'Error inicializando segmentadores'}
+            # 2. Inicializar el segmentador correcto según el tipo
+            tipo_segmentador = 'piezas' if tipo_analisis == 'medicion_piezas' else 'defectos'
+            if not self._inicializar_segmentador(tipo_segmentador):
+                return {'error': f'Error inicializando segmentador de {tipo_segmentador}'}
             
             # 3. Obtener configuración
             if configuracion_id:

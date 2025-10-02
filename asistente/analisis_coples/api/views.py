@@ -3,7 +3,7 @@
 from rest_framework import status, generics, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, AllowAny
 from django.shortcuts import get_object_or_404
 from django.db.models import Q
 from django.utils import timezone
@@ -224,6 +224,99 @@ class AnalisisCopleViewSet(viewsets.ModelViewSet):
             logger.error(f"Error realizando análisis: {e}")
             return Response({
                 'error': f'Error realizando análisis: {str(e)}'
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    
+    @action(detail=True, methods=['get'], permission_classes=[AllowAny])
+    def imagen_procesada(self, request, pk=None):
+        """Obtener imagen procesada de un análisis"""
+        try:
+            import base64
+            from django.http import FileResponse
+            
+            analisis = self.get_object()
+            
+            if not analisis.archivo_imagen:
+                return Response({
+                    'error': 'No hay imagen procesada disponible'
+                }, status=status.HTTP_404_NOT_FOUND)
+            
+            # Leer el archivo de imagen
+            try:
+                with analisis.archivo_imagen.open('rb') as f:
+                    imagen_bytes = f.read()
+                
+                # Convertir a base64
+                imagen_base64 = base64.b64encode(imagen_bytes).decode('utf-8')
+                
+                return Response({
+                    'image_data': imagen_base64,
+                    'analisis_id': analisis.id_analisis,
+                    'timestamp': analisis.timestamp_procesamiento.isoformat()
+                })
+                
+            except Exception as e:
+                logger.error(f"Error leyendo archivo de imagen: {e}", exc_info=True)
+                return Response({
+                    'error': 'Error leyendo la imagen'
+                }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+                
+        except Exception as e:
+            logger.error(f"Error obteniendo imagen procesada: {e}", exc_info=True)
+            return Response({
+                'error': str(e)
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    
+    @action(detail=True, methods=['get'], permission_classes=[AllowAny])
+    def miniatura(self, request, pk=None):
+        """Obtener miniatura de imagen procesada de un análisis"""
+        try:
+            import base64
+            import cv2
+            import numpy as np
+            from io import BytesIO
+            from PIL import Image
+            
+            analisis = self.get_object()
+            
+            if not analisis.archivo_imagen:
+                return Response({
+                    'error': 'No hay imagen disponible'
+                }, status=status.HTTP_404_NOT_FOUND)
+            
+            # Leer imagen original
+            try:
+                with analisis.archivo_imagen.open('rb') as f:
+                    imagen_bytes = f.read()
+                
+                # Convertir a imagen PIL
+                imagen_pil = Image.open(BytesIO(imagen_bytes))
+                
+                # Crear miniatura (200x200 manteniendo aspecto)
+                imagen_pil.thumbnail((200, 200), Image.Resampling.LANCZOS)
+                
+                # Convertir de vuelta a bytes
+                buffer = BytesIO()
+                imagen_pil.save(buffer, format='JPEG', quality=85)
+                miniatura_bytes = buffer.getvalue()
+                
+                # Convertir a base64
+                miniatura_base64 = base64.b64encode(miniatura_bytes).decode('utf-8')
+                
+                return Response({
+                    'thumbnail_data': miniatura_base64,
+                    'analisis_id': analisis.id_analisis
+                })
+                
+            except Exception as e:
+                logger.error(f"Error creando miniatura: {e}", exc_info=True)
+                return Response({
+                    'error': 'Error creando miniatura'
+                }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+                
+        except Exception as e:
+            logger.error(f"Error obteniendo miniatura: {e}", exc_info=True)
+            return Response({
+                'error': str(e)
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     
     @action(detail=False, methods=['get'])

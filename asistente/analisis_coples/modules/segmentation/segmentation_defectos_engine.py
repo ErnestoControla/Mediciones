@@ -337,11 +337,28 @@ class SegmentadorDefectosCoples:
                     cy = int((y1 + y2) / 2)
                     
                     # Generar máscara combinando coeficientes con prototipos
+                    print(f"   🎨 Intentando generar máscara para detección {i}...")
                     try:
-                        mask = self._generate_mask(mask_coeff, mask_protos, (x1, y1, x2, y2), (640, 640))
-                        mask_area = int(np.sum(mask > 0.5)) if mask is not None else 0
+                        print(f"      📊 mask_coeff shape: {mask_coeff.shape}")
+                        print(f"      📊 mask_protos shape: {mask_protos.shape}")
+                        print(f"      📊 bbox: ({x1}, {y1}, {x2}, {y2})")
+                        
+                        # TEMPORAL: Crear máscara simple (bbox completo) para evitar crash
+                        print(f"      ⚠️  USANDO MÁSCARA SIMPLE (TEMPORAL)")
+                        mask = np.zeros((640, 640), dtype=np.float32)
+                        x1_int, y1_int, x2_int, y2_int = int(x1), int(y1), int(x2), int(y2)
+                        mask[y1_int:y2_int, x1_int:x2_int] = 1.0
+                        mask_area = int(np.sum(mask > 0.5))
+                        
+                        print(f"      ✅ Máscara simple creada: {mask.shape}, área: {mask_area}")
+                        
+                        # TODO: Descomentar cuando se resuelva el crash
+                        # mask = self._generate_mask(mask_coeff, mask_protos, (x1, y1, x2, y2), (640, 640))
+                        # mask_area = int(np.sum(mask > 0.5)) if mask is not None else 0
                     except Exception as e:
                         print(f"   ⚠️  Error generando máscara: {e}")
+                        import traceback
+                        traceback.print_exc()
                         mask = None
                         mask_area = 0
                     

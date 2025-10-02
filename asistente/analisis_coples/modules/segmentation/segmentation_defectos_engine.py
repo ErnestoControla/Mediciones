@@ -229,6 +229,19 @@ class SegmentadorDefectosCoples:
             print(f"❌ Error en segmentación de defectos: {e}")
             return []
     
+    def segmentar(self, imagen: np.ndarray) -> List[Dict]:
+        """
+        Método de compatibilidad con el sistema integrado.
+        Alias para segmentar_defectos.
+        
+        Args:
+            imagen (np.ndarray): Imagen de entrada (BGR)
+            
+        Returns:
+            List[Dict]: Lista de segmentaciones detectadas
+        """
+        return self.segmentar_defectos(imagen)
+    
     def _procesar_salidas_segmentacion(self, outputs):
         """
         Procesa las salidas del modelo YOLO11-SEG para extraer segmentaciones

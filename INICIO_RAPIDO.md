@@ -2,46 +2,44 @@
 
 ## 🔄 **DESPUÉS DE REINICIAR EL EQUIPO**
 
-### **Método Recomendado: Todo Containerizado (Docker)** 🐳
+### **Método RECOMENDADO: Django Local + Docker** 📹🐳
+
+**Este método es NECESARIO para usar la cámara GigE en 172.16.1.24**
+
+```bash
+cd /home/ernesto/Documentos/Proyectos/Mediciones
+
+# Iniciar servicios en Docker (PostgreSQL, Frontend, Mailpit)
+docker-compose -f asistente/docker-compose.local.yml up -d postgres frontend mailpit
+
+# Ejecutar Django localmente con soporte GigE (en otra terminal)
+./run_django_local.sh
+```
+
+**Esto inicia:**
+- ✅ PostgreSQL (Docker)
+- ✅ Frontend React (Docker)
+- ✅ Mailpit (Docker)
+- ✅ Django con pygigev para cámara GigE (Local - ambiente sapera_django)
+
+**Espera ~10 segundos** y todos los servicios estarán listos.
+
+---
+
+### **Método Alternativo: Todo en Docker (Solo Webcam)** 🐳
+
+Solo si NO necesitas la cámara GigE (usará webcam como fallback):
 
 ```bash
 cd /home/ernesto/Documentos/Proyectos/Mediciones
 docker-compose -f asistente/docker-compose.local.yml up -d
 ```
 
-**Esto inicia TODO:**
+**Esto inicia TODO en Docker:**
 - ✅ PostgreSQL
-- ✅ Django (Backend)
+- ✅ Django (con fallback a webcam)
 - ✅ Frontend (React)
-- ✅ Mailpit (Email local)
-
-**Espera ~30 segundos** y todos los servicios estarán listos.
-
----
-
-### **Método Alternativo: Desarrollo Local** ⚡
-
-Solo si necesitas desarrollo con hot-reload inmediato:
-
-**Paso 1: PostgreSQL**
-```bash
-cd /home/ernesto/Documentos/Proyectos/Mediciones
-./start.sh
-```
-
-**Paso 2: Backend (Terminal 1)**
-```bash
-conda activate sapera_django
-cd /home/ernesto/Documentos/Proyectos/Mediciones/asistente
-export DJANGO_READ_DOT_ENV_FILE=True
-python manage.py runserver
-```
-
-**Paso 3: Frontend (Terminal 2)**
-```bash
-cd /home/ernesto/Documentos/Proyectos/Mediciones/frontend
-npm run dev
-```
+- ✅ Mailpit
 
 ---
 

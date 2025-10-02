@@ -8,9 +8,26 @@
 
 import enum
 import ctypes
+import os
 
-gevlib_libname = 'libGevApi.so'
-gevlib_lib = ctypes.CDLL(gevlib_libname)
+# Buscar la librería en diferentes ubicaciones
+gevlib_paths = [
+    '/app/lib/libGevApi.so',  # Docker
+    '/usr/local/lib/libGevApi.so',  # Sistema local
+    'libGevApi.so',  # System path
+]
+
+gevlib_lib = None
+for lib_path in gevlib_paths:
+    try:
+        gevlib_lib = ctypes.CDLL(lib_path)
+        print(f"✅ libGevApi.so cargada desde: {lib_path}")
+        break
+    except OSError:
+        continue
+
+if gevlib_lib is None:
+    raise ImportError("No se pudo cargar libGevApi.so - Verifica que el SDK GigE-V Framework esté instalado")
 
 
 #========================================================================================================

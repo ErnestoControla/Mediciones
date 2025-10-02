@@ -21,7 +21,7 @@ services:
       - ./.envs/.local/.postgres
     ports:
       - "8000:8000"
-    # Configuración para acceso a webcam
+    # Configuración para acceso a webcam (solo fallback en Docker)
     devices:
       - /dev/video0:/dev/video0  # Webcam principal
       - /dev/video1:/dev/video1  # Webcam secundaria

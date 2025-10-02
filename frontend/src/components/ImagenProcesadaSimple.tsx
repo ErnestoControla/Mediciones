@@ -24,7 +24,7 @@ const ImagenProcesadaSimple: React.FC<ImagenProcesadaSimpleProps> = ({
         console.log(`🔄 Loading image for analysis ${analisisId}`);
         
         // Obtener detalles del análisis para conseguir la URL de la imagen
-        const analisis = await analisisAPI.getAnalisisDetalle(analisisId);
+        const analisis = await analisisAPI.getAnalisisById(analisisId);
         
         console.log(`📦 Analysis response:`, analisis);
         

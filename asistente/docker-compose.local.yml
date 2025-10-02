@@ -35,6 +35,8 @@ services:
       dockerfile: ./compose/production/postgres/Dockerfile
     image: asistente_production_postgres
     container_name: asistente_local_postgres
+    ports:
+      - "5432:5432"
     volumes:
       - asistente_local_postgres_data:/var/lib/postgresql/data
       - asistente_local_postgres_data_backups:/backups

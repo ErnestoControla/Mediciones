@@ -1,15 +1,8 @@
 /**
- * Componente de preview de cámara GigE
- * 
- * Funcionalidades:
- * - Preview en tiempo real a 5 FPS (polling cada 200ms)
- * - Control de inicialización/liberación de cámara
- * - Control de preview (iniciar/detener)
- * - Detección y reactivación desde hibernación
- * - Indicadores visuales de estado
+ * Componente de preview de cámara GigE - VERSION SIMPLIFICADA PARA DEBUG
  */
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Card,
@@ -20,19 +13,15 @@ import {
   Alert,
   Chip,
   Stack,
-  CircularProgress,
-  IconButton,
-  Tooltip
+  CircularProgress
 } from '@mui/material';
 import {
-  Videocam,
-  VideocamOff,
+  PowerSettingsNew,
   PlayArrow,
   Pause,
   Refresh,
-  PowerSettingsNew,
-  CameraAlt,
-  HourglassEmpty
+  Videocam,
+  VideocamOff
 } from '@mui/icons-material';
 
 import {
@@ -42,25 +31,35 @@ import {
   iniciarPreview,
   detenerPreview,
   reactivarPreview,
-  getPreviewFrameUrl,
-  EstadoCamaraResponse
+  getPreviewFrameUrl
 } from '../api/camara';
+import type { EstadoCamaraResponse } from '../api/camara';
 import Swal from 'sweetalert2';
 
 const CameraPreview: React.FC = () => {
   const [estado, setEstado] = useState<EstadoCamaraResponse | null>(null);
   const [cargando, setCargando] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [previewUrl, setPreviewUrl] = useState<string>('');
-  const [frameTimestamp, setFrameTimestamp] = useState<number>(0);
-  
-  const intervalRef = useRef<NodeJS.Timeout | null>(null);
-  const imgRef = useRef<HTMLImageElement>(null);
+  const [frameKey, setFrameKey] = useState(0);
 
-  /**
-   * Obtiene el estado de la cámara
-   */
-  const cargarEstado = useCallback(async () => {
+  // Cargar estado inicial
+  useEffect(() => {
+    cargarEstado();
+    const interval = setInterval(cargarEstado, 5000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Actualizar frames cuando preview está activo
+  useEffect(() => {
+    if (estado?.estado_bd.en_preview) {
+      const interval = setInterval(() => {
+        setFrameKey(prev => prev + 1);
+      }, 200); // 5 FPS = 200ms
+      return () => clearInterval(interval);
+    }
+  }, [estado?.estado_bd.en_preview]);
+
+  const cargarEstado = async () => {
     try {
       const data = await obtenerEstadoCamara();
       setEstado(data);
@@ -69,11 +68,8 @@ const CameraPreview: React.FC = () => {
       console.error('Error cargando estado:', err);
       setError(err.response?.data?.error || 'Error cargando estado');
     }
-  }, []);
+  };
 
-  /**
-   * Inicializa la cámara
-   */
   const handleInicializar = async () => {
     setCargando(true);
     try {
@@ -101,21 +97,7 @@ const CameraPreview: React.FC = () => {
     }
   };
 
-  /**
-   * Libera la cámara
-   */
   const handleLiberar = async () => {
-    const confirmar = await Swal.fire({
-      title: '¿Liberar cámara?',
-      text: 'Se detendrá el preview y se liberarán los recursos',
-      icon: 'warning',
-      showCancelButton: true,
-      confirmButtonText: 'Sí, liberar',
-      cancelButtonText: 'Cancelar'
-    });
-
-    if (!confirmar.isConfirmed) return;
-
     setCargando(true);
     try {
       const result = await liberarCamara();
@@ -128,14 +110,11 @@ const CameraPreview: React.FC = () => {
           timer: 2000
         });
         await cargarEstado();
-        detenerPolling();
-      } else {
-        throw new Error(result.error);
       }
     } catch (err: any) {
       await Swal.fire({
         title: 'Error',
-        text: err.response?.data?.error || err.message || 'Error liberando cámara',
+        text: err.response?.data?.error || err.message,
         icon: 'error'
       });
     } finally {
@@ -143,9 +122,6 @@ const CameraPreview: React.FC = () => {
     }
   };
 
-  /**
-   * Inicia el preview
-   */
   const handleIniciarPreview = async () => {
     setCargando(true);
     try {
@@ -153,21 +129,17 @@ const CameraPreview: React.FC = () => {
       
       if (result.success) {
         await cargarEstado();
-        iniciarPolling();
-        
         await Swal.fire({
           title: 'Preview Iniciado',
           text: `Preview activo a ${result.fps} FPS`,
           icon: 'success',
           timer: 2000
         });
-      } else {
-        throw new Error(result.error);
       }
     } catch (err: any) {
       await Swal.fire({
         title: 'Error',
-        text: err.response?.data?.error || err.message || 'Error iniciando preview',
+        text: err.response?.data?.error || err.message,
         icon: 'error'
       });
     } finally {
@@ -175,9 +147,6 @@ const CameraPreview: React.FC = () => {
     }
   };
 
-  /**
-   * Detiene el preview
-   */
   const handleDetenerPreview = async () => {
     setCargando(true);
     try {
@@ -185,21 +154,17 @@ const CameraPreview: React.FC = () => {
       
       if (result.success) {
         await cargarEstado();
-        detenerPolling();
-        
         await Swal.fire({
           title: 'Preview Detenido',
           text: result.message,
           icon: 'info',
           timer: 2000
         });
-      } else {
-        throw new Error(result.error);
       }
     } catch (err: any) {
       await Swal.fire({
         title: 'Error',
-        text: err.response?.data?.error || err.message || 'Error deteniendo preview',
+        text: err.response?.data?.error || err.message,
         icon: 'error'
       });
     } finally {
@@ -207,9 +172,6 @@ const CameraPreview: React.FC = () => {
     }
   };
 
-  /**
-   * Reactiva desde hibernación
-   */
   const handleReactivar = async () => {
     setCargando(true);
     try {
@@ -217,21 +179,17 @@ const CameraPreview: React.FC = () => {
       
       if (result.success) {
         await cargarEstado();
-        iniciarPolling();
-        
         await Swal.fire({
           title: 'Preview Reactivado',
-          text: 'Cámara reactivada desde hibernación',
+          text: `Preview reactivado a ${result.fps} FPS`,
           icon: 'success',
           timer: 2000
         });
-      } else {
-        throw new Error(result.error);
       }
     } catch (err: any) {
       await Swal.fire({
         title: 'Error',
-        text: err.response?.data?.error || err.message || 'Error reactivando preview',
+        text: err.response?.data?.error || err.message,
         icon: 'error'
       });
     } finally {
@@ -239,136 +197,28 @@ const CameraPreview: React.FC = () => {
     }
   };
 
-  /**
-   * Inicia el polling de frames
-   */
-  const iniciarPolling = () => {
-    if (intervalRef.current) {
-      clearInterval(intervalRef.current);
-    }
-
-    // Polling cada 200ms (5 FPS)
-    intervalRef.current = setInterval(() => {
-      setFrameTimestamp(Date.now());
-    }, 200);
-  };
-
-  /**
-   * Detiene el polling de frames
-   */
-  const detenerPolling = () => {
-    if (intervalRef.current) {
-      clearInterval(intervalRef.current);
-      intervalRef.current = null;
-    }
-    setPreviewUrl('');
-  };
-
-  /**
-   * Actualiza la URL del frame con timestamp para evitar cache
-   */
-  useEffect(() => {
-    if (estado?.estado_bd.en_preview && !estado?.estado_bd.hibernada) {
-      const baseUrl = getPreviewFrameUrl();
-      const token = localStorage.getItem('access_token');
-      setPreviewUrl(`${baseUrl}?t=${frameTimestamp}&token=${token}`);
-    }
-  }, [frameTimestamp, estado]);
-
-  /**
-   * Carga el estado inicial y configura polling si está en preview
-   */
-  useEffect(() => {
-    cargarEstado();
-
-    // Polling del estado cada 5 segundos
-    const estadoInterval = setInterval(cargarEstado, 5000);
-
-    return () => {
-      clearInterval(estadoInterval);
-      detenerPolling();
-    };
-  }, [cargarEstado]);
-
-  /**
-   * Controla el polling según el estado
-   */
-  useEffect(() => {
-    if (estado?.estado_bd.en_preview && !estado?.estado_bd.hibernada) {
-      iniciarPolling();
-    } else {
-      detenerPolling();
-    }
-  }, [estado?.estado_bd.en_preview, estado?.estado_bd.hibernada]);
-
-  /**
-   * Renderiza el chip de estado
-   */
-  const renderEstadoChip = () => {
-    if (!estado) return null;
-
-    const { activa, en_preview, hibernada, modelo_cargado } = estado.estado_bd;
-
-    if (hibernada) {
-      return (
-        <Chip
-          icon={<HourglassEmpty />}
-          label="Hibernada"
-          color="warning"
-          size="small"
-        />
-      );
-    }
-
-    if (en_preview) {
-      return (
-        <Chip
-          icon={<Videocam />}
-          label={`Preview ${estado.estado_bd.frame_rate_actual} FPS`}
-          color="success"
-          size="small"
-        />
-      );
-    }
-
-    if (activa) {
-      return (
-        <Chip
-          icon={<CameraAlt />}
-          label="Activa"
-          color="primary"
-          size="small"
-        />
-      );
-    }
-
-    return (
-      <Chip
-        icon={<VideocamOff />}
-        label="Inactiva"
-        color="default"
-        size="small"
-      />
-    );
-  };
-
   return (
     <Card>
       <CardHeader
         title="Control de Cámara GigE"
-        subheader="Preview en tiempo real y control de hibernación"
+        subheader="Preview en tiempo real"
         action={
-          <Stack direction="row" spacing={1} alignItems="center">
-            {renderEstadoChip()}
-            {estado?.estado_servicio.usando_webcam && (
-              <Chip label="Webcam Fallback" size="small" color="info" />
-            )}
-            {estado && (
-              <Typography variant="caption" color="text.secondary">
-                Modelo: {estado.estado_bd.modelo_cargado_display}
-              </Typography>
-            )}
-          </Stack>
+          estado && (
+            <Chip
+              icon={estado.estado_bd.en_preview ? <Videocam /> : <VideocamOff />}
+              label={
+                estado.estado_bd.hibernada ? 'Hibernada' :
+                estado.estado_bd.activa ? 'Activa' : 
+                'Inactiva'
+              }
+              color={
+                estado.estado_bd.hibernada ? 'warning' :
+                estado.estado_bd.activa ? 'success' : 
+                'default'
+              }
+              size="small"
+            />
+          )
         }
       />
       
@@ -384,57 +234,38 @@ const CameraPreview: React.FC = () => {
           sx={{
             width: '100%',
             height: 480,
-            backgroundColor: '#000',
+            backgroundColor: '#1a1a1a',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             borderRadius: 1,
             mb: 2,
+            border: '2px solid #333',
+            overflow: 'hidden',
             position: 'relative'
           }}
         >
-          {estado?.estado_bd.en_preview && !estado?.estado_bd.hibernada ? (
+          {estado?.estado_bd.en_preview ? (
             <img
-              ref={imgRef}
-              src={previewUrl}
+              src={`${getPreviewFrameUrl()}?t=${frameKey}`}
               alt="Camera Preview"
               style={{
                 maxWidth: '100%',
                 maxHeight: '100%',
                 objectFit: 'contain'
               }}
-              onError={() => {
-                // Silenciosamente continuar si hay error de carga
+              onError={(e) => {
+                const target = e.target as HTMLImageElement;
+                target.style.display = 'none';
               }}
             />
-          ) : estado?.estado_bd.hibernada ? (
-            <Box textAlign="center">
-              <HourglassEmpty sx={{ fontSize: 80, color: 'warning.main', mb: 2 }} />
-              <Typography variant="h6" color="warning.main">
-                Cámara Hibernada
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                Inactiva por más de 1 minuto
-              </Typography>
-            </Box>
-          ) : estado?.estado_bd.activa ? (
-            <Box textAlign="center">
-              <VideocamOff sx={{ fontSize: 80, color: 'text.disabled', mb: 2 }} />
-              <Typography variant="h6" color="text.secondary">
-                Preview Detenido
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                Inicia el preview para ver la cámara
-              </Typography>
-            </Box>
           ) : (
-            <Box textAlign="center">
-              <CameraAlt sx={{ fontSize: 80, color: 'text.disabled', mb: 2 }} />
+            <Box sx={{ textAlign: 'center' }}>
+              <VideocamOff sx={{ fontSize: 64, color: '#666', mb: 2 }} />
               <Typography variant="h6" color="text.secondary">
-                Cámara No Inicializada
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                Conecta la cámara para comenzar
+                {estado?.estado_bd.activa 
+                  ? 'Presiona "Iniciar Preview" para ver la cámara' 
+                  : 'Inicializa la cámara para continuar'}
               </Typography>
             </Box>
           )}
@@ -442,7 +273,6 @@ const CameraPreview: React.FC = () => {
 
         {/* Controles */}
         <Stack spacing={2}>
-          {/* Controles de cámara */}
           <Box>
             <Typography variant="subtitle2" gutterBottom>
               Control de Cámara
@@ -470,7 +300,6 @@ const CameraPreview: React.FC = () => {
             </Stack>
           </Box>
 
-          {/* Controles de preview */}
           {estado?.estado_bd.activa && (
             <Box>
               <Typography variant="subtitle2" gutterBottom>
@@ -509,11 +338,15 @@ const CameraPreview: React.FC = () => {
                   </Button>
                 )}
                 
-                <Tooltip title="Recargar estado">
-                  <IconButton onClick={cargarEstado} disabled={cargando}>
-                    <Refresh />
-                  </IconButton>
-                </Tooltip>
+                <Button
+                  variant="text"
+                  startIcon={<Refresh />}
+                  onClick={cargarEstado}
+                  disabled={cargando}
+                  size="small"
+                >
+                  Actualizar Estado
+                </Button>
               </Stack>
             </Box>
           )}
@@ -527,34 +360,24 @@ const CameraPreview: React.FC = () => {
               <Stack spacing={0.5}>
                 <Typography variant="body2">
                   <strong>Estado:</strong>{' '}
-                  {estado.estado_bd.hibernada
-                    ? 'Hibernada'
-                    : estado.estado_bd.en_preview
-                    ? `Preview activo (${estado.estado_bd.frame_rate_actual} FPS)`
-                    : estado.estado_bd.activa
-                    ? 'Activa (sin preview)'
-                    : 'Inactiva'}
+                  {estado.estado_bd.hibernada ? '😴 Hibernada' : 
+                   estado.estado_bd.activa ? '✅ Activa' : '❌ Inactiva'}
+                </Typography>
+                <Typography variant="body2">
+                  <strong>Preview:</strong>{' '}
+                  {estado.estado_bd.en_preview ? `🎬 Activo (${estado.estado_bd.frame_rate_actual} FPS)` : '⏸️ Detenido'}
                 </Typography>
                 <Typography variant="body2">
                   <strong>Tipo:</strong>{' '}
-                  {estado.estado_servicio.usando_webcam ? 'Webcam (Fallback)' : 'Cámara GigE'}
+                  {estado.estado_servicio.usando_webcam ? '💻 Webcam (Fallback)' : '📹 Cámara GigE'}
                 </Typography>
-                <Typography variant="body2">
-                  <strong>Modelo cargado:</strong> {estado.estado_bd.modelo_cargado_display}
-                </Typography>
-                <Typography variant="body2">
-                  <strong>Último uso:</strong> {estado.estado_bd.tiempo_desde_ultimo_uso}
-                </Typography>
+                {estado.estado_bd.hibernada && (
+                  <Typography variant="body2" color="warning.main">
+                    ⏰ Hibernada automáticamente por inactividad
+                  </Typography>
+                )}
               </Stack>
             </Box>
-          )}
-
-          {/* Alerta de hibernación automática */}
-          {estado?.estado_bd.en_preview && !estado?.estado_bd.hibernada && (
-            <Alert severity="info" icon={<HourglassEmpty />}>
-              El preview se hibernará automáticamente después de 1 minuto de inactividad.
-              Cualquier interacción con la cámara resetea el timer.
-            </Alert>
           )}
         </Stack>
 
@@ -569,4 +392,3 @@ const CameraPreview: React.FC = () => {
 };
 
 export default CameraPreview;
-

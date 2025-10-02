@@ -325,6 +325,16 @@ class WebcamFallback:
         
         return None, 0, 0
     
+    def capturar_frame(self) -> Optional[np.ndarray]:
+        """
+        Captura un frame para compatibilidad con CameraService.
+        
+        Returns:
+            np.ndarray: Frame capturado o None si hay error
+        """
+        frame, _, _ = self.obtener_frame_sincrono()
+        return frame
+    
     def detener_captura_continua(self):
         """Detiene la captura continua"""
         if self.capturando:

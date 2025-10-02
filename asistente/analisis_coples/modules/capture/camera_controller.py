@@ -16,19 +16,26 @@ import os
 # Importar configuración
 from analisis_coples.expo_config import CameraConfig, StatsConfig, GlobalConfig
 
-# Obtener el código de soporte común para el GigE-V Framework (opcional)
-sys.path.append("../gigev_common")
+# Obtener el código de soporte común para el GigE-V Framework
+# Agregar la ruta de gigev_common al path
+# camera_controller.py está en: asistente/analisis_coples/modules/capture/
+# gigev_common está en: asistente/gigev_common/
+gigev_common_path = os.path.join(os.path.dirname(__file__), '..', '..', '..', 'gigev_common')
+gigev_common_path = os.path.abspath(gigev_common_path)
+if gigev_common_path not in sys.path:
+    sys.path.insert(0, gigev_common_path)
 
 # Importación condicional de pygigev (solo disponible con Sapera SDK)
 try:
     import pygigev
     from pygigev import GevPixelFormats as GPF
     PYGIGEV_AVAILABLE = True
-except ImportError:
+    print(f"✅ pygigev importado correctamente desde: {gigev_common_path}")
+except ImportError as e:
     pygigev = None
     GPF = None
     PYGIGEV_AVAILABLE = False
-    print("⚠️ pygigev no disponible - Cámara GigE no funcionará (usar webcam como fallback)")
+    print(f"⚠️ pygigev no disponible - Cámara GigE no funcionará (usar webcam como fallback): {e}")
 
 
 class CamaraTiempoOptimizada:
@@ -116,23 +123,40 @@ class CamaraTiempoOptimizada:
             camera_info = (pygigev.GEV_CAMERA_INFO * CameraConfig.MAX_CAMERAS)()
             status = pygigev.GevGetCameraList(camera_info, CameraConfig.MAX_CAMERAS, ctypes.byref(numFound))
             
-            if status != 0 or numFound.value == 0:
-                print("❌ Error buscando cámaras")
+            print(f"🔍 Buscando cámaras GigE... Status: {status}, Encontradas: {numFound.value}")
+            
+            if status != 0:
+                print(f"❌ Error en GevGetCameraList. Status code: {status}")
                 return False
+            
+            if numFound.value == 0:
+                print("❌ No se encontraron cámaras GigE en la red")
+                return False
+            
+            # Mostrar cámaras encontradas
+            print(f"✅ {numFound.value} cámara(s) GigE encontrada(s):")
+            for i in range(numFound.value):
+                cam_ip = self._int_to_ip(camera_info[i].ipAddr)
+                print(f"   [{i}] IP: {cam_ip}")
 
             # Buscar cámara por IP
             target_ip_int = self._ip_to_int(self.ip)
+            print(f"🎯 Buscando cámara con IP: {self.ip} (int: {target_ip_int})")
+            
             self.camIndex = -1
             for i in range(numFound.value):
                 if camera_info[i].ipAddr == target_ip_int:
                     self.camIndex = i
+                    print(f"✅ Cámara encontrada en índice {i}")
                     break
 
             if self.camIndex == -1:
-                print(f"❗No se encontró la cámara con IP {self.ip}")
+                print(f"❌ No se encontró la cámara con IP {self.ip}")
+                print(f"   IPs disponibles: {[self._int_to_ip(camera_info[i].ipAddr) for i in range(numFound.value)]}")
                 return False
 
             # Abrir cámara
+            print(f"🔓 Intentando abrir cámara en modo exclusivo...")
             self.handle = (ctypes.c_void_p)()
             status = pygigev.GevOpenCamera(
                 camera_info[self.camIndex], 
@@ -140,8 +164,26 @@ class CamaraTiempoOptimizada:
                 ctypes.byref(self.handle)
             )
             if status != 0:
-                print(f"❌ Error abriendo cámara")
-                return False
+                print(f"❌ Error abriendo cámara. Status code: {status}")
+                print(f"   Posibles causas:")
+                print(f"   - La cámara está siendo usada por otro programa")
+                print(f"   - No hay permisos suficientes")
+                print(f"   - La cámara no responde")
+                
+                # Intentar en modo monitor como fallback
+                print(f"🔄 Intentando abrir en modo monitor...")
+                status = pygigev.GevOpenCamera(
+                    camera_info[self.camIndex], 
+                    pygigev.GevMonitorMode, 
+                    ctypes.byref(self.handle)
+                )
+                if status != 0:
+                    print(f"❌ También falló en modo monitor. Status: {status}")
+                    return False
+                else:
+                    print(f"⚠️ Cámara abierta en modo monitor (solo lectura)")
+            else:
+                print(f"✅ Cámara abierta correctamente en modo exclusivo")
 
             # Configurar parámetros de la cámara
             if not self._configurar_parametros_camara():
@@ -174,6 +216,15 @@ class CamaraTiempoOptimizada:
         except Exception as e:
             print(f"⚠️ Error convirtiendo IP {ip_str}: {e}")
             return 0
+    
+    def _int_to_ip(self, ip_int):
+        """Convierte entero a IP string"""
+        try:
+            import socket
+            return socket.inet_ntoa(ip_int.to_bytes(4, byteorder='big'))
+        except Exception as e:
+            print(f"⚠️ Error convirtiendo IP entero {ip_int}: {e}")
+            return "0.0.0.0"
 
     def _configurar_parametros_camara(self):
         """Configura los parámetros básicos de la cámara."""
@@ -247,6 +298,19 @@ class CamaraTiempoOptimizada:
             if status != 0:
                 print("❌ Error obteniendo parámetros de payload")
                 return False
+            
+            # Mostrar formato de píxel detectado
+            pixel_fmt_value = self.pixel_format.value
+            pixel_fmt_name = "Desconocido"
+            if pixel_fmt_value == GPF.fmtBayerRG8.value:
+                pixel_fmt_name = "BayerRG8"
+            elif pixel_fmt_value == GPF.fmtBayerGR8.value:
+                pixel_fmt_name = "BayerGR8"
+            elif pixel_fmt_value == GPF.fmtBayerGB8.value:
+                pixel_fmt_name = "BayerGB8"
+            elif pixel_fmt_value == GPF.fmtBayerBG8.value:
+                pixel_fmt_name = "BayerBG8"
+            print(f"📷 Formato de píxel: {pixel_fmt_name} (0x{pixel_fmt_value:08X})")
 
             # Configurar buffers con margen extra
             self.buffer_addresses = ((ctypes.c_void_p) * self.num_buffers)()
@@ -400,13 +464,14 @@ class CamaraTiempoOptimizada:
             raw_data = np.frombuffer(im_addr.contents, dtype=np.uint8)
             raw_data = raw_data.reshape((self.roi_height, self.roi_width))
             
-            # Procesar imagen (conversión Bayer a RGB)
-            frame_rgb = cv2.cvtColor(raw_data, cv2.COLOR_BayerRG2RGB)
+            # Procesar imagen invirtiendo canales R y B desde Bayer
+            # Usando BayerBG en lugar de BayerRG para corregir inversión de colores
+            frame_bgr = cv2.cvtColor(raw_data, cv2.COLOR_BayerBG2BGR)
             
             # Actualizar buffer de escritura atómicamente
             with self.buffer_lock:
                 # Guardar frame procesado en buffer de escritura
-                self.processed_frames[self.write_buffer_idx] = frame_rgb.copy()
+                self.processed_frames[self.write_buffer_idx] = frame_bgr.copy()
                 self.frame_ready[self.write_buffer_idx] = True
                 self.frame_timestamps[self.write_buffer_idx] = time.time()
                 

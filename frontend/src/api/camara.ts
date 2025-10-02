@@ -93,7 +93,9 @@ export const reactivarPreview = async (data: PreviewRequest = {}) => {
  * @returns URL completa del endpoint de frame
  */
 export const getPreviewFrameUrl = (): string => {
-  const baseURL = API.defaults.baseURL || 'http://localhost:8000/api';
-  return `${baseURL}/camara/preview/frame/`;
+  const baseURL = API.defaults.baseURL || 'http://localhost:8000/api/';
+  // Eliminar trailing slash del baseURL para evitar doble slash
+  const cleanBaseURL = baseURL.endsWith('/') ? baseURL.slice(0, -1) : baseURL;
+  return `${cleanBaseURL}/camara/preview/frame/`;
 };
 

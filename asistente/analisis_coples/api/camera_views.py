@@ -15,7 +15,7 @@ import logging
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, AllowAny
 from django.http import HttpResponse
 
 from ..services.camera_service import get_camera_service
@@ -171,17 +171,19 @@ class CamaraControlViewSet(viewsets.ViewSet):
                 'error': str(e)
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     
-    @action(detail=False, methods=['get'], url_path='preview/frame')
+    @action(detail=False, methods=['get'], url_path='preview/frame', permission_classes=[AllowAny])
     def preview_frame(self, request):
         """
         Obtiene el frame actual del preview como imagen JPEG.
+        
+        Endpoint público (no requiere autenticación) para permitir carga desde <img> tag.
         
         Returns:
             HttpResponse con imagen JPEG
         """
         try:
-            # Resetear timer de hibernación (interacción del usuario)
-            self.camera_service.resetear_timer_hibernacion()
+            # NO resetear timer aquí - la solicitud automática de frames
+            # no cuenta como interacción del usuario para hibernación
             
             frame_bytes = self.camera_service.obtener_frame_preview()
             

@@ -260,6 +260,17 @@ class CameraService:
                     'error': 'No hay cámara inicializada'
                 }
             
+            # Si es cámara GigE, iniciar captura continua
+            if self.camara_gige and not self.usando_webcam:
+                logger.info("🚀 Iniciando captura continua de cámara GigE...")
+                if not self.camara_gige.iniciar_captura_continua():
+                    logger.error("❌ Error iniciando captura continua de GigE")
+                    return {
+                        'success': False,
+                        'error': 'Error iniciando captura continua de cámara GigE'
+                    }
+                logger.info("✅ Captura continua GigE iniciada")
+            
             # Configurar FPS
             self.fps_preview = fps
             self.frame_interval = 1.0 / fps
@@ -312,6 +323,12 @@ class CameraService:
             # Esperar a que termine el thread
             if self.preview_thread and self.preview_thread.is_alive():
                 self.preview_thread.join(timeout=2.0)
+            
+            # Si es cámara GigE, detener captura continua
+            if self.camara_gige and not self.usando_webcam:
+                logger.info("🛑 Deteniendo captura continua de cámara GigE...")
+                self.camara_gige.detener_captura()
+                logger.info("✅ Captura continua GigE detenida")
             
             self.preview_activo = False
             self._actualizar_estado_bd(en_preview=False)

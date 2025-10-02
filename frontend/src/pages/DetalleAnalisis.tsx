@@ -31,7 +31,6 @@ import { analisisAPI } from '../api/analisis';
 import type { AnalisisCople } from '../api/analisis';
 import dayjs from 'dayjs';
 import ImagenProcesadaSimple from '../components/ImagenProcesadaSimple';
-import Layout from '../components/Layout';
 
 const DetalleAnalisis: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -88,46 +87,49 @@ const DetalleAnalisis: React.FC = () => {
 
   if (loading) {
     return (
-      <Layout>
-        <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
-          <CircularProgress />
-        </Box>
-      </Layout>
+      <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
+        <CircularProgress />
+      </Box>
     );
   }
 
   if (!analisis) {
     return (
-      <Layout>
-        <Box>
-          <Alert severity="error">Análisis no encontrado</Alert>
-          <Button
-            startIcon={<ArrowBack />}
-            onClick={() => navigate('/analisis')}
-            sx={{ mt: 2 }}
-          >
-            Volver
-          </Button>
-        </Box>
-      </Layout>
-    );
-  }
-
-  return (
-    <Layout>
-      <Box display="flex" alignItems="center" gap={2} mb={3}>
+      <Box>
+        <Alert severity="error">Análisis no encontrado</Alert>
         <Button
           startIcon={<ArrowBack />}
           onClick={() => navigate('/analisis')}
+          sx={{ mt: 2 }}
         >
           Volver
         </Button>
-        <Typography variant="h4" component="h1">
-          Detalle del Análisis
-        </Typography>
       </Box>
+    );
+  }
 
-      <Grid container spacing={3}>
+  console.log('🎯 Renderizando DetalleAnalisis, analisis:', analisis);
+  console.log('📊 segmentaciones_piezas:', analisis.segmentaciones_piezas);
+  console.log('📊 segmentaciones_defectos:', analisis.segmentaciones_defectos);
+  console.log('⏱️ tiempos:', analisis.tiempos);
+  console.log('⏱️ tiempo_total_ms:', analisis.tiempo_total_ms);
+  
+  return (
+    <Box sx={{ p: 3 }}>
+        <Box display="flex" alignItems="center" gap={2} mb={3}>
+          <Button
+            startIcon={<ArrowBack />}
+            onClick={() => navigate('/analisis')}
+            variant="contained"
+          >
+            Volver
+          </Button>
+          <Typography variant="h4" component="h1">
+            Detalle del Análisis - ID: {analisis.id}
+          </Typography>
+        </Box>
+
+        <Grid container spacing={3}>
         {/* Información General */}
         <Grid size={{ xs: 12, md: 8 }}>
           <Card>
@@ -353,7 +355,7 @@ const DetalleAnalisis: React.FC = () => {
           )}
         </Grid>
       </Grid>
-    </Layout>
+    </Box>
   );
 };
 

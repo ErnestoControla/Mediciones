@@ -4,7 +4,7 @@
  * Endpoints para control de cámara, preview e hibernación
  */
 
-import axios from './axios';
+import API from './axios';
 
 export interface EstadoCamara {
   activa: boolean;
@@ -44,7 +44,7 @@ export interface PreviewRequest {
  * Inicializa la cámara GigE
  */
 export const inicializarCamara = async (data: InicializarCamaraRequest = {}) => {
-  const response = await axios.post('/camara/inicializar/', data);
+  const response = await API.post('/camara/inicializar/', data);
   return response.data;
 };
 
@@ -52,7 +52,7 @@ export const inicializarCamara = async (data: InicializarCamaraRequest = {}) => 
  * Libera la cámara
  */
 export const liberarCamara = async () => {
-  const response = await axios.post('/camara/liberar/');
+  const response = await API.post('/camara/liberar/');
   return response.data;
 };
 
@@ -60,7 +60,7 @@ export const liberarCamara = async () => {
  * Obtiene el estado actual de la cámara
  */
 export const obtenerEstadoCamara = async (): Promise<EstadoCamaraResponse> => {
-  const response = await axios.get('/camara/estado/');
+  const response = await API.get('/camara/estado/');
   return response.data;
 };
 
@@ -68,7 +68,7 @@ export const obtenerEstadoCamara = async (): Promise<EstadoCamaraResponse> => {
  * Inicia el preview de la cámara
  */
 export const iniciarPreview = async (data: PreviewRequest = {}) => {
-  const response = await axios.post('/camara/preview/iniciar/', data);
+  const response = await API.post('/camara/preview/iniciar/', data);
   return response.data;
 };
 
@@ -76,7 +76,7 @@ export const iniciarPreview = async (data: PreviewRequest = {}) => {
  * Detiene el preview de la cámara
  */
 export const detenerPreview = async () => {
-  const response = await axios.post('/camara/preview/detener/');
+  const response = await API.post('/camara/preview/detener/');
   return response.data;
 };
 
@@ -84,7 +84,7 @@ export const detenerPreview = async () => {
  * Reactiva el preview desde hibernación
  */
 export const reactivarPreview = async (data: PreviewRequest = {}) => {
-  const response = await axios.post('/camara/preview/reactivar/', data);
+  const response = await API.post('/camara/preview/reactivar/', data);
   return response.data;
 };
 
@@ -93,7 +93,7 @@ export const reactivarPreview = async (data: PreviewRequest = {}) => {
  * @returns URL completa del endpoint de frame
  */
 export const getPreviewFrameUrl = (): string => {
-  const baseURL = axios.defaults.baseURL || 'http://localhost:8000/api';
+  const baseURL = API.defaults.baseURL || 'http://localhost:8000/api';
   return `${baseURL}/camara/preview/frame/`;
 };
 

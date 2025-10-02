@@ -111,6 +111,14 @@ const DetalleAnalisis: React.FC = () => {
   console.log('🎯 Renderizando DetalleAnalisis, analisis:', analisis);
   console.log('📊 segmentaciones_piezas:', analisis.segmentaciones_piezas);
   console.log('📊 segmentaciones_defectos:', analisis.segmentaciones_defectos);
+  
+  // Debug: Ver campos del primer defecto
+  if (analisis.segmentaciones_defectos && analisis.segmentaciones_defectos.length > 0) {
+    console.log('🔍 Primer defecto completo:', analisis.segmentaciones_defectos[0]);
+    console.log('📏 mediciones_px completo:', analisis.segmentaciones_defectos[0].mediciones_px);
+    console.log('📐 geometria completo:', analisis.segmentaciones_defectos[0].geometria);
+  }
+  
   console.log('⏱️ tiempos:', analisis.tiempos);
   console.log('⏱️ tiempo_total_ms:', analisis.tiempo_total_ms);
   
@@ -231,18 +239,18 @@ const DetalleAnalisis: React.FC = () => {
                       </TableRow>
                     </TableHead>
                     <TableBody>
-                      {analisis.segmentaciones_piezas.map((pieza, index) => (
+                      {analisis.segmentaciones_piezas.map((pieza: any, index) => (
                         <TableRow key={index}>
                           <TableCell>{pieza.clase}</TableCell>
                           <TableCell>
                             {Math.round(pieza.confianza * 100)}%
                           </TableCell>
                           <TableCell>
-                            {pieza.ancho_bbox_px?.toFixed(0)} x {pieza.alto_bbox_px?.toFixed(0)}
+                            {pieza.mediciones_px?.ancho_bbox} x {pieza.mediciones_px?.alto_bbox}
                           </TableCell>
-                          <TableCell>{pieza.area_mascara_px?.toFixed(0)}</TableCell>
-                          <TableCell>{pieza.perimetro_mascara_px?.toFixed(0)}</TableCell>
-                          <TableCell>{pieza.excentricidad?.toFixed(2)}</TableCell>
+                          <TableCell>{pieza.mediciones_px?.area}</TableCell>
+                          <TableCell>{pieza.mediciones_px?.perimetro}</TableCell>
+                          <TableCell>{pieza.geometria?.excentricidad?.toFixed(2)}</TableCell>
                         </TableRow>
                       ))}
                     </TableBody>
@@ -273,18 +281,18 @@ const DetalleAnalisis: React.FC = () => {
                       </TableRow>
                     </TableHead>
                     <TableBody>
-                      {analisis.segmentaciones_defectos.map((defecto, index) => (
+                      {analisis.segmentaciones_defectos.map((defecto: any, index) => (
                         <TableRow key={index}>
                           <TableCell>{defecto.clase}</TableCell>
                           <TableCell>
                             {Math.round(defecto.confianza * 100)}%
                           </TableCell>
                           <TableCell>
-                            {defecto.ancho_bbox_px?.toFixed(0)} x {defecto.alto_bbox_px?.toFixed(0)}
+                            {defecto.mediciones_px?.ancho_bbox} x {defecto.mediciones_px?.alto_bbox}
                           </TableCell>
-                          <TableCell>{defecto.area_mascara_px?.toFixed(0)}</TableCell>
-                          <TableCell>{defecto.perimetro_mascara_px?.toFixed(0)}</TableCell>
-                          <TableCell>{defecto.excentricidad?.toFixed(2)}</TableCell>
+                          <TableCell>{defecto.mediciones_px?.area}</TableCell>
+                          <TableCell>{defecto.mediciones_px?.perimetro}</TableCell>
+                          <TableCell>{defecto.geometria?.excentricidad?.toFixed(2)}</TableCell>
                         </TableRow>
                       ))}
                     </TableBody>

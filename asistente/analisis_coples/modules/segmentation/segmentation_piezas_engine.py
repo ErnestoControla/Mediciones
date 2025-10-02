@@ -168,8 +168,25 @@ class SegmentadorPiezasCoples:
             print("🧠 Ejecutando inferencia ONNX...")
             print(f"   Input name: {self.input_name}")
             print(f"   Output names: {self.output_names}")
-            outputs = self.session.run(self.output_names, {self.input_name: imagen_procesada})
-            print(f"✅ Inferencia completada: {len(outputs)} outputs")
+            print(f"   Input shape: {imagen_procesada.shape}")
+            
+            try:
+                outputs = self.session.run(self.output_names, {self.input_name: imagen_procesada})
+                print(f"✅ Inferencia ONNX exitosa: {len(outputs)} outputs")
+                if len(outputs) > 0:
+                    print(f"   Output 0 shape: {outputs[0].shape}")
+                if len(outputs) > 1:
+                    print(f"   Output 1 shape: {outputs[1].shape}")
+            except Exception as e:
+                print(f"⚠️ Error en inferencia ONNX: {e}, usando fallback")
+                import traceback
+                traceback.print_exc()
+                # Crear outputs de fallback vacíos
+                outputs = [
+                    np.zeros((1, 37, 8400), dtype=np.float32),  # Detections
+                    np.zeros((1, 32, 160, 160), dtype=np.float32)  # Mask protos
+                ]
+                print("⚠️ Usando outputs de fallback (vacíos)")
             
             # Procesar salidas
             print("🔍 Procesando salidas...")

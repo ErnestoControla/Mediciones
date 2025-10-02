@@ -78,9 +78,8 @@ class ModelsConfig:
     DETECTION_PARTS_MODEL = "CopleDetPZ1C1V.onnx"
     
     # Modelos de segmentación
-    # TEMPORAL: Usando modelo de piezas porque CopleSegDef1C8V.onnx causa segfault en ONNX Runtime
-    SEGMENTATION_DEFECTOS_MODEL = "CopleSegPZ1C1V.onnx"  # TEMPORAL! Debe ser CopleSegDef1C8V.onnx
-    SEGMENTATION_DEFECTOS_CLASSES = "clases_CopleSegPZ1C1V.txt"  # TEMPORAL!
+    SEGMENTATION_DEFECTOS_MODEL = "CopleSegDef1C8V.onnx"
+    SEGMENTATION_DEFECTOS_CLASSES = "clases_CopleSegDef1C8V.txt"
     SEGMENTATION_PARTS_MODEL = "CopleSegPZ1C1V.onnx"
     SEGMENTATION_PARTS_CLASSES = "clases_CopleSegPZ1C1V.txt"
     

@@ -190,10 +190,12 @@ class AnalisisCople(models.Model):
     )
     
     # Archivos generados
-    archivo_imagen = models.CharField(
+    archivo_imagen = models.ImageField(
         _("Archivo de imagen"),
-        max_length=255,
-        help_text="Nombre del archivo de imagen generado"
+        upload_to='analisis/',
+        blank=True,
+        null=True,
+        help_text="Imagen procesada con máscaras dibujadas"
     )
     
     archivo_json = models.CharField(

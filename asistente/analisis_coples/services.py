@@ -130,7 +130,7 @@ class ServicioAnalisisCoples:
             analisis_db = AnalisisCople.objects.create(
                 id_analisis=id_analisis,
                 timestamp_captura=timezone.now(),
-                tipo_analisis='completo',
+                tipo_analisis='medicion_piezas',  # Por defecto piezas
                 estado='procesando',
                 configuracion=self.configuracion_activa,
                 usuario=usuario,
@@ -140,9 +140,6 @@ class ServicioAnalisisCoples:
                 resolucion_alto=640,
                 resolucion_canales=3,
                 tiempo_captura_ms=0.0,
-                tiempo_clasificacion_ms=0.0,
-                tiempo_deteccion_piezas_ms=0.0,
-                tiempo_deteccion_defectos_ms=0.0,
                 tiempo_segmentacion_defectos_ms=0.0,
                 tiempo_segmentacion_piezas_ms=0.0,
                 tiempo_total_ms=0.0,

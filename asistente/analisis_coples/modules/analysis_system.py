@@ -16,12 +16,13 @@ sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 
 # from modules.capture import CamaraTiempoOptimizada  # Comentado temporalmente - usar solo webcam
 from modules.capture.webcam_fallback import WebcamFallback, detectar_mejor_webcam
-from modules.classification import ClasificadorCoplesONNX, ProcesadorImagenClasificacion
-# from modules.detection import DetectorPiezasCoples, ProcesadorPiezasCoples, DetectorDefectosCoples, ProcesadorDefectos  # Comentado temporalmente
-# from modules.segmentation import SegmentadorDefectosCoples, ProcesadorSegmentacionDefectos  # Comentado temporalmente
+# from modules.classification import ClasificadorCoplesONNX, ProcesadorImagenClasificacion  # No usamos clasificación
+# from modules.detection import DetectorPiezasCoples, ProcesadorPiezasCoples, DetectorDefectosCoples, ProcesadorDefectos  # No usamos detección
+from modules.segmentation.segmentation_defectos_engine import SegmentadorDefectosCoples
+from modules.segmentation.defectos_segmentation_processor import ProcesadorSegmentacionDefectos
+from modules.segmentation.segmentation_piezas_engine import SegmentadorPiezasCoples
+from modules.segmentation.piezas_segmentation_processor import ProcesadorSegmentacionPiezas
 from modules.metadata_standard import MetadataStandard
-# from modules.segmentation.segmentation_piezas_engine import SegmentadorPiezasCoples  # Comentado temporalmente
-# from modules.segmentation.piezas_segmentation_processor import ProcesadorSegmentacionPiezas  # Comentado temporalmente
 from modules.preprocessing.illumination_robust import RobustezIluminacion
 from modules.adaptive_thresholds import UmbralesAdaptativos
 from analisis_coples.expo_config import GlobalConfig, RobustezConfig, WebcamConfig
@@ -118,21 +119,17 @@ class SistemaAnalisisIntegrado:
         try:
             print("🚀 Inicializando sistema integrado de análisis...")
             
-            # 1. Inicializar webcam directamente (sin cámara GigE)
-            print("📷 Inicializando webcam...")
-            if not self._inicializar_webcam_fallback():
-                print("❌ Error inicializando webcam")
-                return False
-            else:
-                print("✅ Webcam inicializada correctamente")
+            # 1. NO inicializar cámara - usar imagen provista externamente
+            # El CameraService ya maneja la cámara GigE
+            print("📷 Sistema usará imágenes provistas externamente (desde CameraService)")
             
-            # 2. Inicializar clasificador
-            print("🧠 Inicializando clasificador...")
-            self.clasificador = ClasificadorCoplesONNX()
-            if not self.clasificador.inicializar():
-                print("❌ Error inicializando clasificador")
-                return False
-            self.procesador_clasificacion = ProcesadorImagenClasificacion()
+            # 2. Inicializar clasificador (COMENTADO - Solo usamos segmentación)
+            # print("🧠 Inicializando clasificador...")
+            # self.clasificador = ClasificadorCoplesONNX()
+            # if not self.clasificador.inicializar():
+            #     print("❌ Error inicializando clasificador")
+            #     return False
+            # self.procesador_clasificacion = ProcesadorImagenClasificacion()
             
             # 3. Inicializar detector de piezas (COMENTADO - Solo clasificación)
             # print("🎯 Inicializando detector de piezas...")
@@ -147,21 +144,21 @@ class SistemaAnalisisIntegrado:
             #     return False
             # self.procesador_deteccion_defectos = ProcesadorDefectos()
             
-            # 5. Inicializar segmentador de defectos (COMENTADO - Solo clasificación)
-            # print("🎯 Inicializando segmentador de defectos...")
-            # self.segmentador_defectos = SegmentadorDefectosCoples()
-            # if not self.segmentador_defectos._inicializar_modelo():
-            #     print("❌ Error inicializando segmentador de defectos")
-            #     return False
-            # self.procesador_segmentacion_defectos = ProcesadorSegmentacionDefectos()
+            # 5. Inicializar segmentador de defectos
+            print("🎯 Inicializando segmentador de defectos...")
+            self.segmentador_defectos = SegmentadorDefectosCoples()
+            if not self.segmentador_defectos._inicializar_modelo():
+                print("❌ Error inicializando segmentador de defectos")
+                return False
+            self.procesador_segmentacion_defectos = ProcesadorSegmentacionDefectos()
             
-            # 6. Inicializar segmentador de piezas (COMENTADO - Solo clasificación)
-            # print("🎯 Inicializando segmentador de piezas...")
-            # self.segmentador_piezas = SegmentadorPiezasCoples()
-            # if not self.segmentador_piezas.stats['inicializado']:
-            #     print("❌ Error inicializando segmentador de piezas")
-            #     return False
-            # self.procesador_segmentacion_piezas = ProcesadorSegmentacionPiezas()
+            # 6. Inicializar segmentador de piezas
+            print("🎯 Inicializando segmentador de piezas...")
+            self.segmentador_piezas = SegmentadorPiezasCoples()
+            if not self.segmentador_piezas.stats['inicializado']:
+                print("❌ Error inicializando segmentador de piezas")
+                return False
+            self.procesador_segmentacion_piezas = ProcesadorSegmentacionPiezas()
             
             # 7. Iniciar captura continua (solo para cámara GigE)
             if not self.usando_webcam:
@@ -258,9 +255,12 @@ class SistemaAnalisisIntegrado:
         try:
             print("🚀 INICIANDO ANÁLISIS COMPLETO SECUENCIAL...")
             
-            # 1. Pausar captura continua temporalmente
-            print("⏸️ Pausando captura continua para análisis...")
-            self.camara.pausar_captura_continua()
+            # 1. Pausar captura continua temporalmente (solo si es cámara GigE)
+            if not self.usando_webcam and self.camara:
+                print("⏸️ Pausando captura continua para análisis...")
+                self.camara.pausar_captura_continua()
+            elif self.usando_webcam:
+                print("📷 Usando webcam - no requiere pausa")
             
             # 2. Capturar imagen única
             print("📷 Capturando imagen única...")

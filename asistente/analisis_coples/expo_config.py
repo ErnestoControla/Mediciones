@@ -64,8 +64,9 @@ class WebcamConfig:
 class ModelsConfig:
     """Configuración de los modelos ONNX"""
     
-    # Directorio de modelos
-    MODELS_DIR = "/app/analisis_coples/Modelos"
+    # Directorio de modelos (ruta relativa desde expo_config.py)
+    _BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+    MODELS_DIR = os.path.join(_BASE_DIR, "Modelos")
     
     # Modelo de clasificación
     CLASSIFICATION_MODEL = "CopleClasDef2C1V.onnx"

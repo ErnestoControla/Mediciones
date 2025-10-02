@@ -84,7 +84,7 @@ class ConfiguracionSistemaViewSet(viewsets.ModelViewSet):
             }, status=status.HTTP_404_NOT_FOUND)
 
 
-class AnalisisCopleViewSet(viewsets.ReadOnlyModelViewSet):
+class AnalisisCopleViewSet(viewsets.ModelViewSet):
     """ViewSet para gestionar análisis de coples"""
     
     queryset = AnalisisCople.objects.all()
@@ -94,6 +94,8 @@ class AnalisisCopleViewSet(viewsets.ReadOnlyModelViewSet):
         """Usar serializer detallado para retrieve, simplificado para list"""
         if self.action == 'retrieve':
             return AnalisisCopleSerializer
+        elif self.action == 'create':
+            return AnalisisRequestSerializer
         return AnalisisCopleListSerializer
     
     def get_queryset(self):
@@ -133,6 +135,54 @@ class AnalisisCopleViewSet(viewsets.ReadOnlyModelViewSet):
                 pass
         
         return queryset.order_by('-timestamp_procesamiento')
+    
+    def create(self, request):
+        """
+        Crea un nuevo análisis ejecutando segmentación y mediciones.
+        
+        Body params:
+            tipo_analisis: 'medicion_piezas' o 'medicion_defectos'
+            configuracion_id (opcional): ID de configuración a usar
+        """
+        serializer = self.get_serializer(data=request.data)
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        
+        tipo_analisis = serializer.validated_data['tipo_analisis']
+        configuracion_id = serializer.validated_data.get('configuracion_id')
+        
+        try:
+            # Inicializar sistema si es necesario
+            if not servicio_analisis.inicializado:
+                if not servicio_analisis.inicializar_sistema(configuracion_id):
+                    return Response({
+                        'error': 'Error inicializando el sistema de análisis'
+                    }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            
+            # Ejecutar análisis según el tipo
+            if tipo_analisis == 'medicion_piezas':
+                resultado = servicio_analisis.realizar_analisis_completo(request.user)
+            elif tipo_analisis == 'medicion_defectos':
+                resultado = servicio_analisis.realizar_analisis_completo(request.user)
+            else:
+                resultado = servicio_analisis.realizar_analisis_completo(request.user)
+            
+            if 'error' in resultado:
+                return Response({
+                    'error': resultado['error']
+                }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            
+            # Obtener el análisis creado
+            analisis = AnalisisCople.objects.get(id_analisis=resultado['id_analisis'])
+            serializer_response = AnalisisCopleSerializer(analisis)
+            
+            return Response(serializer_response.data, status=status.HTTP_201_CREATED)
+            
+        except Exception as e:
+            logger.error(f"Error creando análisis: {e}")
+            return Response({
+                'error': f'Error ejecutando análisis: {str(e)}'
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     
     @action(detail=False, methods=['post'])
     def realizar_analisis(self, request):
@@ -404,4 +454,70 @@ class SistemaControlViewSet(viewsets.ViewSet):
             logger.error(f"Error liberando sistema: {e}")
             return Response({
                 'error': f'Error liberando sistema: {str(e)}'
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    
+    @action(detail=False, methods=['post'])
+    def capturar(self, request):
+        """
+        Captura una imagen desde la cámara activa.
+        
+        Returns:
+            URL de la imagen capturada y ruta en servidor
+        """
+        try:
+            from ..services.camera_service import get_camera_service
+            import cv2
+            import os
+            from django.conf import settings
+            from datetime import datetime
+            
+            camera_service = get_camera_service()
+            
+            # Verificar que hay cámara activa
+            estado = camera_service.obtener_estado()
+            if not estado['activa']:
+                return Response({
+                    'exito': False,
+                    'error': 'No hay cámara inicializada. Inicializa la cámara primero.'
+                }, status=status.HTTP_400_BAD_REQUEST)
+            
+            # Capturar imagen
+            exito, imagen = camera_service.capturar_imagen()
+            
+            if not exito or imagen is None:
+                return Response({
+                    'exito': False,
+                    'error': 'Error capturando imagen de la cámara'
+                }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            
+            # Guardar imagen en media
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
+            filename = f"captura_{timestamp}.jpg"
+            
+            # Crear directorio si no existe
+            capturas_dir = os.path.join(settings.MEDIA_ROOT, 'capturas')
+            os.makedirs(capturas_dir, exist_ok=True)
+            
+            # Guardar imagen
+            filepath = os.path.join(capturas_dir, filename)
+            cv2.imwrite(filepath, imagen)
+            
+            # URL relativa para el frontend
+            imagen_url = f"/media/capturas/{filename}"
+            
+            logger.info(f"📸 Imagen capturada: {filename}")
+            
+            return Response({
+                'exito': True,
+                'imagen_url': imagen_url,
+                'imagen_path': filepath,
+                'timestamp': timestamp,
+                'message': 'Imagen capturada correctamente'
+            })
+            
+        except Exception as e:
+            logger.error(f"Error capturando imagen: {e}")
+            return Response({
+                'exito': False,
+                'error': f'Error capturando imagen: {str(e)}'
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

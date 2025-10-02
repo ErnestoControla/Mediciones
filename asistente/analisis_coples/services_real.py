@@ -203,7 +203,7 @@ class ServicioAnalisisCoplesReal:
             analisis_db = AnalisisCople.objects.create(
                 id_analisis=id_analisis,
                 timestamp_captura=timezone.now(),
-                tipo_analisis='completo',
+                tipo_analisis='medicion_piezas',  # Por defecto piezas
                 estado='procesando',
                 configuracion=self.configuracion_activa,
                 usuario=usuario,
@@ -213,9 +213,6 @@ class ServicioAnalisisCoplesReal:
                 resolucion_alto=imagen_capturada.shape[0],
                 resolucion_canales=imagen_capturada.shape[2] if len(imagen_capturada.shape) > 2 else 1,
                 tiempo_captura_ms=50.0,
-                tiempo_clasificacion_ms=0.0,
-                tiempo_deteccion_piezas_ms=0.0,
-                tiempo_deteccion_defectos_ms=0.0,
                 tiempo_segmentacion_defectos_ms=0.0,
                 tiempo_segmentacion_piezas_ms=0.0,
                 tiempo_total_ms=0.0,
@@ -225,8 +222,23 @@ class ServicioAnalisisCoplesReal:
             # Realizar análisis completo usando el sistema real
             resultados = self.sistema_analisis.analisis_completo()
             
-            # Procesar resultados y guardar en base de datos
-            self._procesar_resultados_analisis(analisis_db, resultados, imagen_capturada)
+            # Guardar resultados en base de datos
+            logger.info(f"💾 Guardando resultados en BD...")
+            
+            # Guardar segmentaciones de piezas
+            if "segmentaciones_piezas" in resultados:
+                logger.info(f"🔩 Guardando {len(resultados['segmentaciones_piezas'])} segmentaciones de piezas")
+                self._guardar_segmentaciones_piezas(analisis_db, resultados)
+            
+            # Guardar segmentaciones de defectos
+            if "segmentaciones_defectos" in resultados:
+                logger.info(f"⚠️ Guardando {len(resultados['segmentaciones_defectos'])} segmentaciones de defectos")
+                self._guardar_segmentaciones_defectos(analisis_db, resultados)
+            
+            # Actualizar registro con tiempos
+            analisis_db.tiempo_total_ms = resultados.get("tiempo_total", 0) * 1000
+            analisis_db.estado = 'completado'
+            analisis_db.save()
             
             logger.info(f"✅ Análisis completo finalizado: {id_analisis}")
             
@@ -270,7 +282,7 @@ class ServicioAnalisisCoplesReal:
             analisis_db = AnalisisCople.objects.create(
                 id_analisis=id_analisis,
                 timestamp_captura=timezone.now(),
-                tipo_analisis='clasificacion',
+                tipo_analisis='medicion_defectos',  # Clasificación ya no se usa
                 estado='procesando',
                 configuracion=self.configuracion_activa,
                 usuario=usuario,
@@ -280,9 +292,6 @@ class ServicioAnalisisCoplesReal:
                 resolucion_alto=imagen_capturada.shape[0],
                 resolucion_canales=imagen_capturada.shape[2] if len(imagen_capturada.shape) > 2 else 1,
                 tiempo_captura_ms=50.0,
-                tiempo_clasificacion_ms=0.0,
-                tiempo_deteccion_piezas_ms=0.0,
-                tiempo_deteccion_defectos_ms=0.0,
                 tiempo_segmentacion_defectos_ms=0.0,
                 tiempo_segmentacion_piezas_ms=0.0,
                 tiempo_total_ms=0.0,
@@ -712,6 +721,142 @@ class ServicioAnalisisCoplesReal:
         except Exception as e:
             logger.error(f"Error obteniendo estadísticas: {e}")
             return {"error": str(e)}
+    
+    def _guardar_segmentaciones_defectos(self, analisis_db: AnalisisCople, resultados: Dict[str, Any]):
+        """Guarda las segmentaciones de defectos con mediciones calculadas"""
+        if "segmentaciones_defectos" not in resultados:
+            logger.warning("No hay segmentaciones de defectos en resultados")
+            return
+        
+        from modules.measurements import get_measurement_service
+        from .models import ConfiguracionSistema
+        from .resultados_models import SegmentacionDefecto
+        import numpy as np
+        
+        # Obtener servicio de mediciones
+        measurement_service = get_measurement_service()
+        
+        # Cargar configuración para factor de conversión (si existe)
+        config = ConfiguracionSistema.objects.filter(activa=True).first()
+        if config and config.factor_conversion_px_mm:
+            measurement_service.set_conversion_factor(config.factor_conversion_px_mm)
+        
+        segmentaciones = resultados["segmentaciones_defectos"]
+        logger.info(f"📐 Procesando {len(segmentaciones)} segmentaciones de defectos")
+        
+        for idx, segmentacion in enumerate(segmentaciones):
+            bbox = segmentacion.get("bbox", {})
+            centroide = segmentacion.get("centroide", {})
+            
+            # Calcular mediciones si hay máscara
+            mediciones = {}
+            mascara_raw = segmentacion.get("mascara")
+            if mascara_raw is not None:
+                # Convertir máscara a numpy array si es necesario
+                if not isinstance(mascara_raw, np.ndarray):
+                    mascara_raw = np.array(mascara_raw, dtype=np.uint8)
+                
+                # Calcular mediciones completas
+                mediciones = measurement_service.calcular_mediciones_completas(
+                    mascara_raw,
+                    convertir_a_mm=bool(config and config.factor_conversion_px_mm)
+                )
+                logger.info(f"📏 Defecto {idx}: ancho={mediciones.get('ancho_bbox_px')}px, área={mediciones.get('area_mascara_px')}px²")
+            
+            SegmentacionDefecto.objects.create(
+                analisis=analisis_db,
+                clase=segmentacion.get("clase", ""),
+                confianza=segmentacion.get("confianza", 0.0),
+                bbox_x1=bbox.get("x1", 0),
+                bbox_y1=bbox.get("y1", 0),
+                bbox_x2=bbox.get("x2", 0),
+                bbox_y2=bbox.get("y2", 0),
+                ancho_bbox_px=mediciones.get("ancho_bbox_px", 0.0),
+                alto_bbox_px=mediciones.get("alto_bbox_px", 0.0),
+                centroide_x=centroide.get("x", 0),
+                centroide_y=centroide.get("y", 0),
+                area_mascara_px=int(mediciones.get("area_mascara_px", 0)),
+                ancho_mascara_px=mediciones.get("ancho_bbox_px", 0.0),
+                alto_mascara_px=mediciones.get("alto_bbox_px", 0.0),
+                perimetro_mascara_px=mediciones.get("perimetro_mascara_px", 0.0),
+                excentricidad=mediciones.get("excentricidad", 0.0),
+                orientacion_grados=mediciones.get("orientacion_grados", 0.0),
+                ancho_bbox_mm=mediciones.get("ancho_bbox_mm"),
+                alto_bbox_mm=mediciones.get("alto_bbox_mm"),
+                ancho_mascara_mm=mediciones.get("ancho_bbox_mm"),
+                alto_mascara_mm=mediciones.get("alto_bbox_mm"),
+                perimetro_mascara_mm=mediciones.get("perimetro_mascara_mm"),
+                area_mascara_mm=mediciones.get("area_mascara_mm"),
+                coeficientes_mascara=segmentacion.get("coeficientes_mascara", [])
+            )
+    
+    def _guardar_segmentaciones_piezas(self, analisis_db: AnalisisCople, resultados: Dict[str, Any]):
+        """Guarda las segmentaciones de piezas con mediciones calculadas"""
+        if "segmentaciones_piezas" not in resultados:
+            logger.warning("No hay segmentaciones de piezas en resultados")
+            return
+        
+        from modules.measurements import get_measurement_service
+        from .models import ConfiguracionSistema
+        from .resultados_models import SegmentacionPieza
+        import numpy as np
+        
+        # Obtener servicio de mediciones
+        measurement_service = get_measurement_service()
+        
+        # Cargar configuración para factor de conversión (si existe)
+        config = ConfiguracionSistema.objects.filter(activa=True).first()
+        if config and config.factor_conversion_px_mm:
+            measurement_service.set_conversion_factor(config.factor_conversion_px_mm)
+        
+        segmentaciones = resultados["segmentaciones_piezas"]
+        logger.info(f"📐 Procesando {len(segmentaciones)} segmentaciones de piezas")
+        
+        for idx, segmentacion in enumerate(segmentaciones):
+            bbox = segmentacion.get("bbox", {})
+            centroide = segmentacion.get("centroide", {})
+            
+            # Calcular mediciones si hay máscara
+            mediciones = {}
+            mascara_raw = segmentacion.get("mascara")
+            if mascara_raw is not None:
+                # Convertir máscara a numpy array si es necesario
+                if not isinstance(mascara_raw, np.ndarray):
+                    mascara_raw = np.array(mascara_raw, dtype=np.uint8)
+                
+                # Calcular mediciones completas
+                mediciones = measurement_service.calcular_mediciones_completas(
+                    mascara_raw,
+                    convertir_a_mm=bool(config and config.factor_conversion_px_mm)
+                )
+                logger.info(f"📏 Pieza {idx}: ancho={mediciones.get('ancho_bbox_px')}px, área={mediciones.get('area_mascara_px')}px²")
+            
+            SegmentacionPieza.objects.create(
+                analisis=analisis_db,
+                clase=segmentacion.get("clase", ""),
+                confianza=segmentacion.get("confianza", 0.0),
+                bbox_x1=bbox.get("x1", 0),
+                bbox_y1=bbox.get("y1", 0),
+                bbox_x2=bbox.get("x2", 0),
+                bbox_y2=bbox.get("y2", 0),
+                ancho_bbox_px=mediciones.get("ancho_bbox_px", 0.0),
+                alto_bbox_px=mediciones.get("alto_bbox_px", 0.0),
+                centroide_x=centroide.get("x", 0),
+                centroide_y=centroide.get("y", 0),
+                area_mascara_px=int(mediciones.get("area_mascara_px", 0)),
+                ancho_mascara_px=mediciones.get("ancho_bbox_px", 0.0),
+                alto_mascara_px=mediciones.get("alto_bbox_px", 0.0),
+                perimetro_mascara_px=mediciones.get("perimetro_mascara_px", 0.0),
+                excentricidad=mediciones.get("excentricidad", 0.0),
+                orientacion_grados=mediciones.get("orientacion_grados", 0.0),
+                ancho_bbox_mm=mediciones.get("ancho_bbox_mm"),
+                alto_bbox_mm=mediciones.get("alto_bbox_mm"),
+                ancho_mascara_mm=mediciones.get("ancho_bbox_mm"),
+                alto_mascara_mm=mediciones.get("alto_bbox_mm"),
+                perimetro_mascara_mm=mediciones.get("perimetro_mascara_mm"),
+                area_mascara_mm=mediciones.get("area_mascara_mm"),
+                coeficientes_mascara=segmentacion.get("coeficientes_mascara", [])
+            )
     
     def liberar_sistema(self):
         """Libera los recursos del sistema de análisis"""

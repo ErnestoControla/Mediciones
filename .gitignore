@@ -47,6 +47,9 @@ db.sqlite3-journal
 asistente/media/
 media/
 
+# Librerías GigE-V Framework (no distribuibles)
+asistente/lib/
+
 # Archivos estáticos recolectados
 staticfiles/
 asistente/staticfiles/

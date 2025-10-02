@@ -326,8 +326,10 @@ class SegmentadorDefectosCoples:
             if len(indices) > 0:
                 indices = indices.flatten()[:30]  # max_det
                 print(f"   ✅ {len(indices)} detecciones después de NMS")
+                print(f"   📋 Índices a procesar: {indices.tolist()}")
                 
-                for i in indices:
+                for idx_num, i in enumerate(indices):
+                    print(f"\n   🔄 Procesando detección {idx_num + 1}/{len(indices)} (índice original: {i})...")
                     x1, y1, x2, y2 = boxes_xyxy[i]
                     confidence = confidences[i]
                     mask_coeff = mask_coeffs[i]
@@ -389,8 +391,12 @@ class SegmentadorDefectosCoples:
                     else:
                         print(f"   ⚠️  Máscara fallback creada: área: {mask_area}")
                     
+                    print(f"   📝 Agregando segmentación a la lista...")
                     segmentaciones.append(segmentacion)
+                    print(f"   ✅ Segmentación agregada. Total actual: {len(segmentaciones)}")
                     print(f"✅ Segmentación: Defecto - {confidence:.3f} - BBox: ({int(x1)},{int(y1)}) a ({int(x2)},{int(y2)}) - Área: {int((x2 - x1) * (y2 - y1))}")
+                
+                print(f"🔄 Loop de segmentaciones completado. Total: {len(segmentaciones)}")
             else:
                 print(f"   ❌ No se encontraron detecciones después de NMS")
         else:

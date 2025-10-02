@@ -152,20 +152,17 @@ class AnalisisCopleViewSet(viewsets.ModelViewSet):
         configuracion_id = serializer.validated_data.get('configuracion_id')
         
         try:
-            # Inicializar sistema si es necesario
-            if not servicio_analisis.inicializado:
-                if not servicio_analisis.inicializar_sistema(configuracion_id):
-                    return Response({
-                        'error': 'Error inicializando el sistema de análisis'
-                    }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            # Usar el nuevo servicio de segmentación simplificado
+            from ..services.segmentation_analysis_service import get_segmentation_analysis_service
             
-            # Ejecutar análisis según el tipo
-            if tipo_analisis == 'medicion_piezas':
-                resultado = servicio_analisis.realizar_analisis_completo(request.user)
-            elif tipo_analisis == 'medicion_defectos':
-                resultado = servicio_analisis.realizar_analisis_completo(request.user)
-            else:
-                resultado = servicio_analisis.realizar_analisis_completo(request.user)
+            seg_service = get_segmentation_analysis_service()
+            
+            # Ejecutar análisis con captura desde cámara activa
+            resultado = seg_service.analizar_imagen(
+                tipo_analisis=tipo_analisis,
+                usuario=request.user,
+                configuracion_id=configuracion_id
+            )
             
             if 'error' in resultado:
                 return Response({
@@ -173,13 +170,13 @@ class AnalisisCopleViewSet(viewsets.ModelViewSet):
                 }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
             
             # Obtener el análisis creado
-            analisis = AnalisisCople.objects.get(id_analisis=resultado['id_analisis'])
+            analisis = AnalisisCople.objects.get(id=resultado['analisis_id'])
             serializer_response = AnalisisCopleSerializer(analisis)
             
             return Response(serializer_response.data, status=status.HTTP_201_CREATED)
             
         except Exception as e:
-            logger.error(f"Error creando análisis: {e}")
+            logger.error(f"Error creando análisis: {e}", exc_info=True)
             return Response({
                 'error': f'Error ejecutando análisis: {str(e)}'
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

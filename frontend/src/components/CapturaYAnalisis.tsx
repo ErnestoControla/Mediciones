@@ -15,11 +15,16 @@ import {
   Alert,
   Box,
   CircularProgress,
-  Chip
+  Chip,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem
 } from '@mui/material';
 import {
   CameraAlt,
-  CheckCircle
+  CheckCircle,
+  Analytics
 } from '@mui/icons-material';
 import Swal from 'sweetalert2';
 import API from '../api/axios';
@@ -34,9 +39,12 @@ interface ResultadoAnalisis {
 }
 
 const CapturaYAnalisis: React.FC = () => {
+  const [tipoAnalisis, setTipoAnalisis] = useState<'medicion_piezas' | 'medicion_defectos'>('medicion_piezas');
   const [capturando, setCapturando] = useState(false);
+  const [analizando, setAnalizando] = useState(false);
   const [imagenCapturada, setImagenCapturada] = useState<string | null>(null);
   const [timestampCaptura, setTimestampCaptura] = useState<string | null>(null);
+  const [ultimoAnalisis, setUltimoAnalisis] = useState<ResultadoAnalisis | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const handleCapturar = async () => {
@@ -78,6 +86,58 @@ const CapturaYAnalisis: React.FC = () => {
     }
   };
 
+  const handleAnalizar = async () => {
+    setAnalizando(true);
+    setError(null);
+
+    try {
+      // Ejecutar análisis con el tipo seleccionado
+      const response = await API.post('/analisis/resultados/', {
+        tipo_analisis: tipoAnalisis
+      });
+
+      const analisis = response.data;
+      setUltimoAnalisis({
+        id: analisis.id,
+        tipo_analisis: analisis.tipo_analisis_display,
+        estado: analisis.estado,
+        imagen_procesada_url: analisis.imagen_procesada_url,
+        segmentaciones_count: 
+          (analisis.segmentaciones_piezas?.length || 0) + 
+          (analisis.segmentaciones_defectos?.length || 0),
+        tiempo_total_ms: analisis.tiempo_total_ms
+      });
+
+      await Swal.fire({
+        title: '✅ Análisis Completado',
+        html: `
+          <p><strong>Tipo:</strong> ${analisis.tipo_analisis_display}</p>
+          <p><strong>Segmentaciones:</strong> ${
+            (analisis.segmentaciones_piezas?.length || 0) + 
+            (analisis.segmentaciones_defectos?.length || 0)
+          }</p>
+          <p><strong>Tiempo:</strong> ${analisis.tiempo_total_ms.toFixed(0)}ms</p>
+          <p style="margin-top: 10px; color: #4caf50;">
+            ✨ Mediciones calculadas automáticamente
+          </p>
+        `,
+        icon: 'success'
+      });
+
+    } catch (err: any) {
+      const errorMsg = err.response?.data?.error || err.message || 'Error en análisis';
+      setError(errorMsg);
+      
+      await Swal.fire({
+        title: 'Error',
+        text: errorMsg,
+        icon: 'error'
+      });
+    } finally {
+      setAnalizando(false);
+    }
+  };
+
   return (
     <Card>
       <CardHeader
@@ -93,18 +153,44 @@ const CapturaYAnalisis: React.FC = () => {
         )}
 
         <Stack spacing={3}>
-          {/* Botón de captura */}
-          <Button
-            variant="contained"
-            color="primary"
-            size="large"
-            startIcon={capturando ? <CircularProgress size={20} /> : <CameraAlt />}
-            onClick={handleCapturar}
-            disabled={capturando}
-            fullWidth
-          >
-            {capturando ? 'Capturando...' : '📸 Capturar Imagen'}
-          </Button>
+          {/* Tipo de análisis */}
+          <FormControl fullWidth>
+            <InputLabel>Tipo de Análisis</InputLabel>
+            <Select
+              value={tipoAnalisis}
+              label="Tipo de Análisis"
+              onChange={(e) => setTipoAnalisis(e.target.value as any)}
+              disabled={capturando || analizando}
+            >
+              <MenuItem value="medicion_piezas">🔩 Medición de Piezas</MenuItem>
+              <MenuItem value="medicion_defectos">⚠️ Medición de Defectos</MenuItem>
+            </Select>
+          </FormControl>
+
+          {/* Botones de acción */}
+          <Stack direction="row" spacing={2}>
+            <Button
+              variant="contained"
+              color="primary"
+              startIcon={capturando ? <CircularProgress size={20} /> : <CameraAlt />}
+              onClick={handleCapturar}
+              disabled={capturando || analizando}
+              fullWidth
+            >
+              {capturando ? 'Capturando...' : 'Capturar'}
+            </Button>
+
+            <Button
+              variant="contained"
+              color="success"
+              startIcon={analizando ? <CircularProgress size={20} /> : <Analytics />}
+              onClick={handleAnalizar}
+              disabled={capturando || analizando}
+              fullWidth
+            >
+              {analizando ? 'Analizando...' : 'Analizar'}
+            </Button>
+          </Stack>
 
           {/* Imagen capturada */}
           {imagenCapturada && (
@@ -125,25 +211,51 @@ const CapturaYAnalisis: React.FC = () => {
               />
               <Chip
                 icon={<CheckCircle />}
-                label={`Capturada: ${timestampCaptura}`}
+                label={`${timestampCaptura}`}
                 color="success"
                 size="small"
               />
             </Box>
           )}
 
+          {/* Resultado de análisis */}
+          {ultimoAnalisis && (
+            <Box>
+              <Typography variant="subtitle2" gutterBottom>
+                Último Análisis
+              </Typography>
+              <Stack spacing={1}>
+                <Chip
+                  label={`${ultimoAnalisis.segmentaciones_count} segmentaciones`}
+                  color="primary"
+                  size="small"
+                />
+                <Typography variant="body2">
+                  <strong>Tiempo:</strong> {ultimoAnalisis.tiempo_total_ms?.toFixed(0) || 0}ms
+                </Typography>
+                <Button
+                  variant="outlined"
+                  size="small"
+                  onClick={() => window.open(`http://localhost:8000/admin/analisis_coples/analisiscople/${ultimoAnalisis.id}/change/`, '_blank')}
+                >
+                  Ver Mediciones en Admin
+                </Button>
+              </Stack>
+            </Box>
+          )}
+
           {/* Instrucciones */}
           <Alert severity="info">
             <Typography variant="body2">
-              <strong>📋 Cómo usar:</strong>
+              <strong>📋 Flujo de trabajo:</strong>
             </Typography>
             <Typography variant="body2" component="div">
-              1. Inicializa la cámara y activa el preview<br/>
-              2. Posiciona el objeto (cople) frente a la cámara<br/>
-              3. Verifica que lo veas correctamente en el preview<br/>
-              4. Click en "📸 Capturar Imagen"<br/><br/>
-              <strong>✅ La imagen se captura de la cámara activa</strong><br/>
-              (GigE 172.16.1.24 o webcam fallback)
+              1. Selecciona tipo (piezas/defectos)<br/>
+              2. Posiciona el cople en el preview<br/>
+              3. <strong>Capturar</strong> → guarda imagen<br/>
+              4. <strong>Analizar</strong> → segmenta y mide<br/><br/>
+              <strong>✨ Mediciones automáticas:</strong><br/>
+              Ancho, alto, área, perímetro, excentricidad, orientación
             </Typography>
           </Alert>
         </Stack>

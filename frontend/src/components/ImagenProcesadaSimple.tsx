@@ -11,7 +11,7 @@ const ImagenProcesadaSimple: React.FC<ImagenProcesadaSimpleProps> = ({
   analisisId, 
   showThumbnail = true 
 }) => {
-  const [imageData, setImageData] = useState<string | null>(null);
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -21,28 +21,24 @@ const ImagenProcesadaSimple: React.FC<ImagenProcesadaSimpleProps> = ({
         setLoading(true);
         setError(null);
         
-        console.log(`🔄 Loading ${showThumbnail ? 'thumbnail' : 'image'} for analysis ${analisisId}`);
+        console.log(`🔄 Loading image for analysis ${analisisId}`);
         
-        const response = showThumbnail 
-          ? await analisisAPI.getMiniaturaAnalisis(analisisId)
-          : await analisisAPI.getImagenProcesada(analisisId);
+        // Obtener detalles del análisis para conseguir la URL de la imagen
+        const analisis = await analisisAPI.getAnalisisDetalle(analisisId);
         
-        console.log(`📦 ${showThumbnail ? 'Thumbnail' : 'Image'} response:`, response);
+        console.log(`📦 Analysis response:`, analisis);
         
-        const data = showThumbnail ? response.thumbnail_data : response.image_data;
-        
-        if (data && typeof data === 'string' && data.length > 0) {
-          // El backend devuelve solo el base64 puro, necesitamos agregar el prefijo
-          const fullDataUrl = data.startsWith('data:') ? data : `data:image/png;base64,${data}`;
-          setImageData(fullDataUrl);
-          console.log(`✅ ${showThumbnail ? 'Thumbnail' : 'Image'} data loaded:`, data.length, 'chars');
-          console.log(`📦 Full data URL length:`, fullDataUrl.length, 'chars');
+        if (analisis.archivo_imagen) {
+          // archivo_imagen es la ruta relativa, agregar el dominio del servidor
+          const fullUrl = `http://localhost:8000${analisis.archivo_imagen}`;
+          setImageUrl(fullUrl);
+          console.log(`✅ Image URL set:`, fullUrl);
         } else {
-          throw new Error('No image data received');
+          throw new Error('No hay imagen procesada disponible');
         }
       } catch (err) {
-        console.error(`❌ Error loading ${showThumbnail ? 'thumbnail' : 'image'}:`, err);
-        setError(`Error al cargar la ${showThumbnail ? 'miniatura' : 'imagen'}`);
+        console.error(`❌ Error loading image:`, err);
+        setError(`Error al cargar la imagen`);
       } finally {
         setLoading(false);
       }
@@ -53,27 +49,24 @@ const ImagenProcesadaSimple: React.FC<ImagenProcesadaSimpleProps> = ({
 
   if (loading) {
     return (
-      <Box display="flex" justifyContent="center" alignItems="center" minHeight="200px">
-        <CircularProgress />
-        <Typography variant="body2" sx={{ ml: 2 }}>
-          Cargando {showThumbnail ? 'miniatura' : 'imagen'}...
-        </Typography>
+      <Box display="flex" justifyContent="center" alignItems="center" minHeight="100px">
+        <CircularProgress size={20} />
       </Box>
     );
   }
 
   if (error) {
     return (
-      <Alert severity="error">
+      <Alert severity="error" sx={{ py: 1 }}>
         {error}
       </Alert>
     );
   }
 
-  if (!imageData) {
+  if (!imageUrl) {
     return (
-      <Alert severity="warning">
-        No hay {showThumbnail ? 'miniatura' : 'imagen'} disponible
+      <Alert severity="warning" sx={{ py: 1 }}>
+        No hay imagen disponible
       </Alert>
     );
   }
@@ -81,7 +74,7 @@ const ImagenProcesadaSimple: React.FC<ImagenProcesadaSimpleProps> = ({
   return (
     <Box
       component="img"
-      src={imageData}
+      src={imageUrl}
       alt={`Análisis ${analisisId}`}
       sx={{
         width: '100%',
@@ -89,13 +82,15 @@ const ImagenProcesadaSimple: React.FC<ImagenProcesadaSimpleProps> = ({
         borderRadius: 1,
         border: '1px solid',
         borderColor: 'divider',
+        maxHeight: showThumbnail ? '200px' : 'none',
+        objectFit: 'contain',
       }}
       onLoad={() => {
-        console.log(`✅ ${showThumbnail ? 'Thumbnail' : 'Image'} loaded successfully for analysis ${analisisId}`);
+        console.log(`✅ Image loaded successfully for analysis ${analisisId}`);
       }}
       onError={() => {
-        console.error(`❌ ${showThumbnail ? 'Thumbnail' : 'Image'} load error for analysis ${analisisId}`);
-        setError(`Error al cargar la ${showThumbnail ? 'miniatura' : 'imagen'}`);
+        console.error(`❌ Image load error for analysis ${analisisId}`);
+        setError(`Error al cargar la imagen`);
       }}
     />
   );

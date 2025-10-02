@@ -155,13 +155,27 @@ class SegmentationAnalysisService:
             inicio_seg = time.time()
             
             if tipo_analisis == 'medicion_piezas':
-                logger.info("🔩 Ejecutando segmentación de piezas...")
-                segmentaciones = self.segmentador_piezas.segmentar(imagen)
-                tiempo_seg = (time.time() - inicio_seg) * 1000
-                analisis_db.tiempo_segmentacion_piezas_ms = tiempo_seg
-                
-                # Guardar segmentaciones con mediciones
-                self._guardar_segmentaciones_piezas(analisis_db, segmentaciones, config)
+                try:
+                    logger.info("🔩 Ejecutando segmentación de piezas...")
+                    logger.info(f"   Imagen shape: {imagen.shape}, dtype: {imagen.dtype}")
+                    logger.info(f"   Segmentador: {type(self.segmentador_piezas)}")
+                    
+                    # Ejecutar segmentación
+                    segmentaciones = self.segmentador_piezas.segmentar(imagen)
+                    
+                    logger.info(f"✅ Segmentación completada: {len(segmentaciones) if segmentaciones else 0} resultados")
+                    
+                    tiempo_seg = (time.time() - inicio_seg) * 1000
+                    analisis_db.tiempo_segmentacion_piezas_ms = tiempo_seg
+                    
+                    # Guardar segmentaciones con mediciones
+                    self._guardar_segmentaciones_piezas(analisis_db, segmentaciones, config)
+                    
+                except Exception as e:
+                    logger.error(f"❌ Error en segmentación de piezas: {e}", exc_info=True)
+                    analisis_db.estado = 'error'
+                    analisis_db.save()
+                    return {'error': f'Error en segmentación: {str(e)}'}
                 
             elif tipo_analisis == 'medicion_defectos':
                 logger.info("⚠️  Ejecutando segmentación de defectos...")

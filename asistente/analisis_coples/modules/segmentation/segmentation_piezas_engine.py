@@ -152,16 +152,29 @@ class SegmentadorPiezasCoples:
             return []
         
         try:
+            print(f"📥 Iniciando procesamiento de imagen: {imagen.shape}")
             inicio = time.time()
             
             # Preprocesar imagen
+            print("🔄 Preprocesando imagen...")
             imagen_procesada = self._preprocesar_imagen(imagen)
+            print(f"✅ Imagen preprocesada: {imagen_procesada.shape if imagen_procesada is not None else None}")
+            
+            if imagen_procesada is None:
+                print("❌ Error en preprocesamiento")
+                return []
             
             # Ejecutar inferencia
+            print("🧠 Ejecutando inferencia ONNX...")
+            print(f"   Input name: {self.input_name}")
+            print(f"   Output names: {self.output_names}")
             outputs = self.session.run(self.output_names, {self.input_name: imagen_procesada})
+            print(f"✅ Inferencia completada: {len(outputs)} outputs")
             
             # Procesar salidas
+            print("🔍 Procesando salidas...")
             segmentaciones = self._procesar_salidas_segmentacion(outputs)
+            print(f"✅ Salidas procesadas: {len(segmentaciones)} segmentaciones")
             
             # Actualizar estadísticas
             self.tiempo_inferencia = (time.time() - inicio) * 1000
@@ -173,10 +186,13 @@ class SegmentadorPiezasCoples:
             self.stats['tiempo_promedio'] = self.stats['tiempo_total'] / self.stats['inferencias_totales']
             self.stats['ultima_inferencia'] = self.tiempo_inferencia
             
+            print(f"🎉 Procesamiento completado en {self.tiempo_inferencia:.0f}ms")
             return segmentaciones
             
         except Exception as e:
             print(f"❌ Error procesando imagen: {e}")
+            import traceback
+            traceback.print_exc()
             return []
     
     def segmentar(self, imagen: np.ndarray) -> List[Dict]:

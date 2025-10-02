@@ -111,15 +111,20 @@ const CapturaYAnalisis: React.FC = () => {
       await Swal.fire({
         title: '✅ Análisis Completado',
         html: `
-          <p><strong>Tipo:</strong> ${analisis.tipo_analisis_display}</p>
+          <p><strong>Tipo:</strong> ${analisis.tipo_analisis_display || 'N/A'}</p>
           <p><strong>Segmentaciones:</strong> ${
             (analisis.segmentaciones_piezas?.length || 0) + 
             (analisis.segmentaciones_defectos?.length || 0)
           }</p>
-          <p><strong>Tiempo:</strong> ${analisis.tiempo_total_ms.toFixed(0)}ms</p>
+          <p><strong>Tiempo:</strong> ${(analisis.tiempo_total_ms || 0).toFixed(0)}ms</p>
           <p style="margin-top: 10px; color: #4caf50;">
             ✨ Mediciones calculadas automáticamente
           </p>
+          <a href="/admin/analisis_coples/analisiscople/${analisis.id}/change/" 
+             target="_blank"
+             style="display: inline-block; margin-top: 10px; color: #2196f3; text-decoration: none;">
+            📊 Ver detalles en admin →
+          </a>
         `,
         icon: 'success'
       });
@@ -222,10 +227,26 @@ const CapturaYAnalisis: React.FC = () => {
           {ultimoAnalisis && (
             <Box>
               <Typography variant="subtitle2" gutterBottom>
-                Último Análisis
+                Último Análisis - {ultimoAnalisis.tipo_analisis}
               </Typography>
               <Stack spacing={1}>
+                {/* Imagen procesada si existe */}
+                {ultimoAnalisis.imagen_procesada_url && (
+                  <Box
+                    component="img"
+                    src={ultimoAnalisis.imagen_procesada_url}
+                    alt="Imagen procesada"
+                    sx={{
+                      width: '100%',
+                      borderRadius: 1,
+                      border: '2px solid #2196f3',
+                      mb: 1
+                    }}
+                  />
+                )}
+                
                 <Chip
+                  icon={<CheckCircle />}
                   label={`${ultimoAnalisis.segmentaciones_count} segmentaciones`}
                   color="primary"
                   size="small"
@@ -233,12 +254,15 @@ const CapturaYAnalisis: React.FC = () => {
                 <Typography variant="body2">
                   <strong>Tiempo:</strong> {ultimoAnalisis.tiempo_total_ms?.toFixed(0) || 0}ms
                 </Typography>
+                <Typography variant="body2" color="success.main">
+                  <strong>Estado:</strong> {ultimoAnalisis.estado}
+                </Typography>
                 <Button
                   variant="outlined"
                   size="small"
                   onClick={() => window.open(`http://localhost:8000/admin/analisis_coples/analisiscople/${ultimoAnalisis.id}/change/`, '_blank')}
                 >
-                  Ver Mediciones en Admin
+                  📊 Ver Mediciones Completas en Admin
                 </Button>
               </Stack>
             </Box>

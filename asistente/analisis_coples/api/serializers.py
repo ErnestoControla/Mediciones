@@ -158,23 +158,28 @@ class AnalisisCopleSerializer(serializers.ModelSerializer):
     segmentaciones_defectos = SegmentacionDefectoSerializer(many=True, read_only=True)
     segmentaciones_piezas = SegmentacionPiezaSerializer(many=True, read_only=True)
     
-    # Tiempos de procesamiento
+    # Tiempos de procesamiento (objeto y campos directos para compatibilidad)
     tiempos = serializers.SerializerMethodField()
+    tiempo_total_ms = serializers.FloatField(read_only=True)
+    
+    # Campos adicionales para frontend
+    tipo_analisis_display = serializers.CharField(source='get_tipo_analisis_display', read_only=True)
+    imagen_procesada_url = serializers.SerializerMethodField()
     
     class Meta:
         model = AnalisisCople
         fields = [
             'id', 'id_analisis', 'timestamp_captura', 'timestamp_procesamiento',
-            'tipo_analisis', 'estado', 'usuario', 'usuario_nombre', 'configuracion',
-            'configuracion_nombre', 'archivo_imagen', 'archivo_json',
+            'tipo_analisis', 'tipo_analisis_display', 'estado', 'usuario', 'usuario_nombre', 
+            'configuracion', 'configuracion_nombre', 'archivo_imagen', 'archivo_json',
             'resolucion_ancho', 'resolucion_alto', 'resolucion_canales',
-            'tiempos', 'metadatos_json', 'mensaje_error',
+            'tiempos', 'tiempo_total_ms', 'imagen_procesada_url', 'metadatos_json', 'mensaje_error',
             'segmentaciones_defectos', 'segmentaciones_piezas'
         ]
         read_only_fields = [
             'id', 'timestamp_procesamiento', 'archivo_imagen', 'archivo_json',
             'resolucion_ancho', 'resolucion_alto', 'resolucion_canales',
-            'tiempos', 'metadatos_json', 'mensaje_error'
+            'tiempos', 'tiempo_total_ms', 'imagen_procesada_url', 'metadatos_json', 'mensaje_error'
         ]
     
     def get_tiempos(self, obj):
@@ -184,6 +189,15 @@ class AnalisisCopleSerializer(serializers.ModelSerializer):
             'segmentacion_piezas_ms': obj.tiempo_segmentacion_piezas_ms,
             'total_ms': obj.tiempo_total_ms
         }
+    
+    def get_imagen_procesada_url(self, obj):
+        """Retorna la URL de la imagen procesada si existe"""
+        if obj.archivo_imagen:
+            request = self.context.get('request')
+            if request:
+                return request.build_absolute_uri(obj.archivo_imagen.url)
+            return obj.archivo_imagen.url
+        return None
 
 
 class AnalisisCopleListSerializer(serializers.ModelSerializer):

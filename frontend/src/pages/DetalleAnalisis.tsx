@@ -88,43 +88,46 @@ const DetalleAnalisis: React.FC = () => {
 
   if (loading) {
     return (
-      <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
-        <CircularProgress />
-      </Box>
+      <Layout>
+        <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
+          <CircularProgress />
+        </Box>
+      </Layout>
     );
   }
 
   if (!analisis) {
     return (
-      <Box>
-        <Alert severity="error">Análisis no encontrado</Alert>
-        <Button
-          startIcon={<ArrowBack />}
-          onClick={() => navigate('/analisis')}
-          sx={{ mt: 2 }}
-        >
-          Volver
-        </Button>
-      </Box>
+      <Layout>
+        <Box>
+          <Alert severity="error">Análisis no encontrado</Alert>
+          <Button
+            startIcon={<ArrowBack />}
+            onClick={() => navigate('/analisis')}
+            sx={{ mt: 2 }}
+          >
+            Volver
+          </Button>
+        </Box>
+      </Layout>
     );
   }
 
   return (
     <Layout>
-      <Box>
-        <Box display="flex" alignItems="center" gap={2} mb={3}>
-          <Button
-            startIcon={<ArrowBack />}
-            onClick={() => navigate('/analisis')}
-          >
-            Volver
-          </Button>
-          <Typography variant="h4" component="h1">
-            Detalle del Análisis
-          </Typography>
-        </Box>
+      <Box display="flex" alignItems="center" gap={2} mb={3}>
+        <Button
+          startIcon={<ArrowBack />}
+          onClick={() => navigate('/analisis')}
+        >
+          Volver
+        </Button>
+        <Typography variant="h4" component="h1">
+          Detalle del Análisis
+        </Typography>
+      </Box>
 
-        <Grid container spacing={3}>
+      <Grid container spacing={3}>
         {/* Información General */}
         <Grid size={{ xs: 12, md: 8 }}>
           <Card>
@@ -350,7 +353,6 @@ const DetalleAnalisis: React.FC = () => {
           )}
         </Grid>
       </Grid>
-      </Box>
     </Layout>
   );
 };

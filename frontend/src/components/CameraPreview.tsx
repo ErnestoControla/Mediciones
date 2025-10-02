@@ -45,7 +45,7 @@ import {
   getPreviewFrameUrl,
   EstadoCamaraResponse
 } from '../api/camara';
-import Swal from '../utils/swal';
+import Swal from 'sweetalert2';
 
 const CameraPreview: React.FC = () => {
   const [estado, setEstado] = useState<EstadoCamaraResponse | null>(null);

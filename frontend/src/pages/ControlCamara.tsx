@@ -9,6 +9,7 @@ import { Container, Grid, Typography, Box, Stack, Card, CardContent } from '@mui
 import PageHeader from '../components/PageHeader';
 import CameraPreview from '../components/CameraPreview';
 import CapturaYAnalisis from '../components/CapturaYAnalisis';
+import EjecutarRutina from '../components/EjecutarRutina';
 
 const ControlCamara: React.FC = () => {
   return (
@@ -29,6 +30,9 @@ const ControlCamara: React.FC = () => {
           <Stack spacing={3}>
             {/* Captura y Análisis */}
             <CapturaYAnalisis />
+
+            {/* Rutina de Inspección Multi-Ángulo */}
+            <EjecutarRutina />
 
             {/* Instrucciones */}
             <Card>

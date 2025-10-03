@@ -3,9 +3,9 @@ Servicio de Rutina de Inspección Multi-Ángulo.
 
 Flujo:
 1. Iniciar rutina (crear registro en BD)
-2. Capturar 6 imágenes automáticamente (cada 3 segundos)
-3. Analizar cada imagen (solo defectos)
-4. Generar imagen consolidada (Grid 2x3)
+2. Capturar 4 imágenes automáticamente (cada 2 segundos)
+3. Analizar cada imagen (solo defectos, con máscaras simples)
+4. Generar imagen consolidada (Grid 2x2)
 5. Generar reporte consolidado
 6. Finalizar rutina
 """
@@ -36,16 +36,16 @@ class RutinaInspeccionService:
     """
     Servicio para ejecutar rutinas de inspección multi-ángulo.
     
-    Simula un brazo robótico que captura 6 imágenes del mismo objeto
+    Simula un brazo robótico que captura 4 imágenes del mismo objeto
     desde diferentes ángulos y genera un reporte consolidado.
     """
     
     def __init__(self):
         """Inicializa el servicio"""
         self.segmentation_service = get_segmentation_analysis_service()
-        self.num_angulos = 6  # Número de ángulos a capturar
+        self.num_angulos = 4  # Número de ángulos a capturar (reducido para barrido más rápido)
         self.delay_entre_capturas = 2  # Segundos entre capturas (solo captura, sin ONNX)
-        self.delay_entre_analisis = 10  # Segundos entre análisis (liberar memoria de ONNX)
+        self.delay_entre_analisis = 2  # Segundos entre análisis (con máscaras simples es estable)
     
     def iniciar_rutina(
         self,
@@ -476,22 +476,22 @@ class RutinaInspeccionService:
         Returns:
             Path relativo de la imagen guardada
         """
-        logger.info("🎨 Generando imagen consolidada (Grid 2x3)...")
+        logger.info("🎨 Generando imagen consolidada (Grid 2x2)...")
         
         try:
             # Dimensiones para cada celda del grid
             cell_width = 320  # Ancho de cada imagen en el grid
             cell_height = 320  # Alto de cada imagen en el grid
             
-            # Grid 2 filas x 3 columnas
+            # Grid 2 filas x 2 columnas (4 imágenes)
             grid_height = 2 * cell_height
-            grid_width = 3 * cell_width
+            grid_width = 2 * cell_width
             
             # Crear imagen base
             grid_image = np.ones((grid_height, grid_width, 3), dtype=np.uint8) * 240  # Fondo gris claro
             
             # Colocar cada imagen procesada en el grid
-            for idx, analisis in enumerate(analisis_list[:6]):  # Máximo 6
+            for idx, analisis in enumerate(analisis_list[:4]):  # Máximo 4
                 if not analisis.archivo_imagen:
                     logger.warning(f"   ⚠️  Análisis {analisis.id_analisis} sin imagen procesada")
                     continue
@@ -508,9 +508,9 @@ class RutinaInspeccionService:
                     # Redimensionar a tamaño de celda
                     imagen_resized = cv2.resize(imagen, (cell_width, cell_height))
                     
-                    # Calcular posición en el grid
-                    row = idx // 3  # 0 o 1
-                    col = idx % 3   # 0, 1 o 2
+                    # Calcular posición en el grid 2x2
+                    row = idx // 2  # 0 o 1
+                    col = idx % 2   # 0 o 1
                     
                     y_start = row * cell_height
                     y_end = y_start + cell_height

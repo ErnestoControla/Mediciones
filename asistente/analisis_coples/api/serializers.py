@@ -367,11 +367,11 @@ class RutinaInspeccionSerializer(serializers.ModelSerializer):
         return None
     
     def get_progreso(self, obj):
-        """Retorna el progreso de la rutina (0-6)"""
+        """Retorna el progreso de la rutina (0-4)"""
         return {
             'actual': obj.num_imagenes_capturadas,
-            'total': 6,
-            'porcentaje': (obj.num_imagenes_capturadas / 6) * 100 if obj.num_imagenes_capturadas else 0
+            'total': 4,
+            'porcentaje': (obj.num_imagenes_capturadas / 4) * 100 if obj.num_imagenes_capturadas else 0
         }
 
 

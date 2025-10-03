@@ -454,53 +454,87 @@ class SegmentadorPiezasCoples:
         OPTIMIZADO PARA EVITAR TIMEOUTS DE CPU
         """
         try:
+            print(f"         🔬 _generate_mask INICIO")
+            
             # OPTIMIZACIÓN: Usar operación más eficiente que np.tensordot
             # Extraer prototipos (shape: [1, 32, 160, 160])
+            print(f"         📍 Extrayendo prototipos...")
             protos = mask_protos[0]  # Shape: [32, 160, 160]
+            print(f"         ✅ protos extraídos: {protos.shape}")
             
             # OPTIMIZACIÓN: Usar np.dot en lugar de np.tensordot para mejor rendimiento
             # Reshape para operación más eficiente
+            print(f"         📍 Reshape protos...")
             protos_reshaped = protos.reshape(32, -1)  # Shape: [32, 160*160]
+            print(f"         ✅ protos_reshaped: {protos_reshaped.shape}")
+            
+            print(f"         📍 np.dot (CRÍTICO)...")
             mask_flat = np.dot(mask_coeffs, protos_reshaped)  # Shape: [160*160]
+            print(f"         ✅ np.dot exitoso: {mask_flat.shape}")
+            
+            print(f"         📍 Reshape a 2D...")
             mask = mask_flat.reshape(160, 160)  # Shape: [160, 160]
+            print(f"         ✅ mask 2D: {mask.shape}")
             
             # Aplicar sigmoid para normalizar
+            print(f"         📍 Aplicar sigmoid...")
             mask = self._sigmoid(mask)
+            print(f"         ✅ sigmoid aplicado")
             
             # Redimensionar a input_shape
+            print(f"         📍 Redimensionar a {input_shape}...")
             H, W = input_shape
             if mask.shape != (H, W):
+                print(f"         📍 cv2.resize de {mask.shape} a ({W}, {H})...")
                 mask = cv2.resize(mask, (W, H))
+                print(f"         ✅ resize exitoso: {mask.shape}")
             
             # Recortar a la región del bounding box para mejorar precisión
+            print(f"         📍 Preparando crop al bbox...")
             x1, y1, x2, y2 = map(int, bbox)
             mask_cropped = np.zeros_like(mask)
+            print(f"         ✅ mask_cropped inicializada: {mask_cropped.shape}")
             
             # Aplicar máscara solo en la región del bbox
             if x1 < W and y1 < H and x2 > 0 and y2 > 0:
-                # Asegurar que las coordenadas estén dentro de los límites
+                print(f"         📍 Aplicando máscara en región del bbox...")
+                print(f"         📍 Ajustando coordenadas a límites de imagen...")
                 x1 = max(0, x1)
                 y1 = max(0, y1)
                 x2 = min(W, x2)
                 y2 = min(H, y2)
+                print(f"         ✅ Coordenadas ajustadas: ({x1}, {y1}, {x2}, {y2})")
                 
                 # Extraer región de la máscara original
+                print(f"         📍 Extrayendo región bbox de máscara...")
                 bbox_mask = mask[y1:y2, x1:x2]
+                print(f"         ✅ bbox_mask: {bbox_mask.shape}")
+                
                 # Aplicar umbral MÁS ESTRICTO para evitar máscaras muy grandes
-                bbox_mask_binary = (bbox_mask > 0.7).astype(np.float32)  # Cambiado de 0.5 a 0.7
+                print(f"         📍 Aplicando umbral 0.7...")
+                bbox_mask_binary = (bbox_mask > 0.7).astype(np.float32)
+                print(f"         ✅ bbox_mask_binary creada")
+                
+                print(f"         📍 Asignando a mask_cropped...")
                 mask_cropped[y1:y2, x1:x2] = bbox_mask_binary
+                print(f"         ✅ Asignación exitosa")
                 
                 # Validar que la máscara no sea demasiado grande
+                print(f"         📍 Validando tamaño de máscara...")
                 pixels_activos = np.sum(mask_cropped > 0.5)
                 area_bbox = (x2 - x1) * (y2 - y1)
-                if pixels_activos > area_bbox * 0.8:  # Si cubre más del 80% del bbox
-                    print(f"   ⚠️ Máscara muy grande ({pixels_activos} píxeles), usando umbral más estricto")
-                    bbox_mask_binary = (bbox_mask > 0.8).astype(np.float32)  # Umbral aún más estricto
+                print(f"         📊 Píxeles activos: {pixels_activos}, área bbox: {area_bbox}")
+                
+                if pixels_activos > area_bbox * 0.8:
+                    print(f"         ⚠️  Máscara muy grande, aplicando umbral 0.8...")
+                    bbox_mask_binary = (bbox_mask > 0.8).astype(np.float32)
                     mask_cropped[y1:y2, x1:x2] = bbox_mask_binary
+                    print(f"         ✅ Umbral más estricto aplicado")
             
             pixels_activos = np.sum(mask_cropped > 0.5)
-            print(f"   ✅ Máscara generada (optimizada): {mask.shape}, rango: [{mask.min():.3f}, {mask.max():.3f}]")
-            print(f"   📊 Píxeles activos: {pixels_activos} de {mask_cropped.size}")
+            print(f"         ✅ Máscara generada (optimizada): {mask.shape}, rango: [{mask.min():.3f}, {mask.max():.3f}]")
+            print(f"         📊 Píxeles activos: {pixels_activos} de {mask_cropped.size}")
+            print(f"         🔬 _generate_mask FIN EXITOSO")
             
             return mask_cropped
             

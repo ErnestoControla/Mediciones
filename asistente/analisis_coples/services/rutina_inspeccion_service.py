@@ -143,8 +143,8 @@ class RutinaInspeccionService:
                     # Continuar con los demás ángulos
                     continue
                 
-                # Guardar ID del análisis
-                analisis_ids.append(resultado['id'])
+                # Guardar ID del análisis (analisis_id es el ID numérico de BD)
+                analisis_ids.append(resultado['analisis_id'])
                 
                 # Actualizar contador de imágenes
                 rutina.num_imagenes_capturadas = angulo

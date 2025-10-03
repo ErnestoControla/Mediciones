@@ -286,36 +286,27 @@ class SegmentadorDefectosCoples:
                 return segmentaciones
             
             # Transponer para facilitar procesamiento: (1, 37, 8400) -> (8400, 37)
-            print(f"   📍 Transponiendo detections...")
             predictions = detections[0].transpose()  # Shape: (8400, 37)
-            print(f"   ✅ Transposición exitosa: {predictions.shape}")
             
             # Separar componentes
-            print(f"   📍 Separando componentes (boxes, confidences, mask_coeffs)...")
             boxes = predictions[:, :4]  # [x_center, y_center, width, height]
             confidences = predictions[:, 4]  # Puntuaciones de confianza
             mask_coeffs = predictions[:, 5:37]  # 32 coeficientes de máscara
-            print(f"   ✅ Componentes separados")
             
             print(f"   🔍 DEBUG: Boxes shape: {boxes.shape}")
             print(f"   🔍 DEBUG: Confidences shape: {confidences.shape}")
             print(f"   🔍 DEBUG: Mask coefficients shape: {mask_coeffs.shape}")
             
             # Aplicar sigmoid a las confianzas
-            print(f"   📍 Aplicando sigmoid a confidences...")
             confidences = self._sigmoid(confidences)
-            print(f"   ✅ Sigmoid aplicado")
             
             # Filtrar por confianza mínima
-            print(f"   📍 Filtrando por confianza mínima ({self.confianza_min})...")
             valid_indices = confidences > self.confianza_min
-            print(f"   ✅ Filtrado completado")
             
             if not np.any(valid_indices):
                 print(f"   ❌ No se encontraron detecciones con confianza > {self.confianza_min}")
                 return segmentaciones
             
-            print(f"   📍 Aplicando filtro a boxes, confidences, mask_coeffs...")
             boxes = boxes[valid_indices]
             confidences = confidences[valid_indices]
             mask_coeffs = mask_coeffs[valid_indices]
@@ -323,19 +314,15 @@ class SegmentadorDefectosCoples:
             print(f"   ✅ {len(boxes)} detecciones pasaron el filtro de confianza")
             
             # Convertir formato de cajas de center_x, center_y, width, height a x1, y1, x2, y2
-            print(f"   📍 Convirtiendo boxes a formato xyxy...")
             boxes_xyxy = self._convert_to_xyxy(boxes)
-            print(f"   ✅ Conversión exitosa: {boxes_xyxy.shape}")
             
             # Aplicar Non-Maximum Suppression
-            print(f"   📍 Aplicando NMS...")
             indices = cv2.dnn.NMSBoxes(
                 boxes_xyxy.tolist(), 
                 confidences.tolist(), 
                 self.confianza_min, 
                 0.35  # IoU threshold
             )
-            print(f"   ✅ NMS completado")
             
             if len(indices) > 0:
                 indices = indices.flatten()[:30]  # max_det

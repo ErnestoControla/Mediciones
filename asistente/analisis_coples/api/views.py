@@ -657,3 +657,199 @@ class SistemaControlViewSet(viewsets.ViewSet):
                 'exito': False,
                 'error': f'Error capturando imagen: {str(e)}'
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class RutinaInspeccionViewSet(viewsets.ModelViewSet):
+    """ViewSet para gestionar rutinas de inspección multi-ángulo"""
+    
+    queryset = RutinaInspeccion.objects.all()
+    permission_classes = [IsAuthenticated]
+    
+    def get_serializer_class(self):
+        """Usar serializer detallado para retrieve, simplificado para list"""
+        if self.action == 'retrieve':
+            from .serializers import RutinaInspeccionSerializer
+            return RutinaInspeccionSerializer
+        elif self.action == 'iniciar':
+            from .serializers import IniciarRutinaSerializer
+            return IniciarRutinaSerializer
+        else:
+            from .serializers import RutinaInspeccionListSerializer
+            return RutinaInspeccionListSerializer
+    
+    def get_queryset(self):
+        """Filtrar rutinas por usuario"""
+        queryset = super().get_queryset()
+        
+        # Filtrar por usuario si no es superusuario
+        if not self.request.user.is_superuser:
+            queryset = queryset.filter(usuario=self.request.user)
+        
+        return queryset.order_by('-timestamp_inicio')
+    
+    @action(detail=False, methods=['post'])
+    def iniciar(self, request):
+        """
+        Inicia una nueva rutina de inspección.
+        
+        POST /api/rutinas/iniciar/
+        Body: { "configuracion_id": 1 } (opcional)
+        
+        Returns:
+            Información de la rutina creada
+        """
+        try:
+            from ..services.rutina_inspeccion_service import get_rutina_inspeccion_service
+            from .serializers import IniciarRutinaSerializer, RutinaInspeccionSerializer
+            
+            serializer = IniciarRutinaSerializer(data=request.data)
+            if not serializer.is_valid():
+                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            
+            configuracion_id = serializer.validated_data.get('configuracion_id')
+            
+            # Iniciar rutina
+            rutina_service = get_rutina_inspeccion_service()
+            resultado = rutina_service.iniciar_rutina(
+                usuario=request.user,
+                configuracion_id=configuracion_id
+            )
+            
+            if not resultado.get('success'):
+                return Response({
+                    'error': resultado.get('error', 'Error iniciando rutina')
+                }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            
+            # Obtener la rutina creada
+            rutina = RutinaInspeccion.objects.get(id=resultado['rutina_id'])
+            rutina_serializer = RutinaInspeccionSerializer(rutina, context={'request': request})
+            
+            return Response({
+                'message': 'Rutina iniciada exitosamente',
+                'rutina': rutina_serializer.data,
+                'num_angulos': resultado['num_angulos'],
+                'delay_segundos': resultado['delay_segundos']
+            }, status=status.HTTP_201_CREATED)
+            
+        except Exception as e:
+            logger.error(f"Error iniciando rutina: {e}", exc_info=True)
+            return Response({
+                'error': f'Error iniciando rutina: {str(e)}'
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    
+    @action(detail=True, methods=['post'])
+    def ejecutar_barrido(self, request, pk=None):
+        """
+        Ejecuta el barrido automático de 6 ángulos.
+        
+        POST /api/rutinas/{id}/ejecutar_barrido/
+        
+        NOTA: Esta operación toma ~18 segundos (6 fotos x 3s)
+        
+        Returns:
+            Resultado del barrido y lista de análisis creados
+        """
+        try:
+            from ..services.rutina_inspeccion_service import get_rutina_inspeccion_service
+            
+            rutina = self.get_object()
+            
+            # Verificar que la rutina está en progreso
+            if rutina.estado != 'en_progreso':
+                return Response({
+                    'error': f'La rutina está en estado {rutina.estado}, no se puede ejecutar barrido'
+                }, status=status.HTTP_400_BAD_REQUEST)
+            
+            # Ejecutar barrido
+            rutina_service = get_rutina_inspeccion_service()
+            resultado = rutina_service.ejecutar_barrido_automatico(
+                rutina_id=rutina.id,
+                usuario=request.user
+            )
+            
+            if not resultado.get('success'):
+                return Response({
+                    'error': resultado.get('error', 'Error ejecutando barrido')
+                }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            
+            # Finalizar rutina automáticamente
+            resultado_finalizacion = rutina_service.finalizar_rutina(rutina.id)
+            
+            if not resultado_finalizacion.get('success'):
+                return Response({
+                    'error': resultado_finalizacion.get('error', 'Error finalizando rutina')
+                }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            
+            # Recargar rutina para obtener datos actualizados
+            rutina.refresh_from_db()
+            
+            from .serializers import RutinaInspeccionSerializer
+            rutina_serializer = RutinaInspeccionSerializer(rutina, context={'request': request})
+            
+            return Response({
+                'message': 'Barrido completado y rutina finalizada',
+                'rutina': rutina_serializer.data,
+                'num_capturas': resultado['num_capturas'],
+                'analisis_ids': resultado['analisis_ids']
+            })
+            
+        except Exception as e:
+            logger.error(f"Error ejecutando barrido: {e}", exc_info=True)
+            return Response({
+                'error': f'Error ejecutando barrido: {str(e)}'
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    
+    @action(detail=True, methods=['get'])
+    def estado(self, request, pk=None):
+        """
+        Obtiene el estado actual de la rutina.
+        
+        GET /api/rutinas/{id}/estado/
+        
+        Returns:
+            Estado y progreso de la rutina
+        """
+        try:
+            rutina = self.get_object()
+            
+            from .serializers import RutinaInspeccionSerializer
+            serializer = RutinaInspeccionSerializer(rutina, context={'request': request})
+            
+            return Response(serializer.data)
+            
+        except Exception as e:
+            logger.error(f"Error obteniendo estado: {e}")
+            return Response({
+                'error': f'Error obteniendo estado: {str(e)}'
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    
+    @action(detail=True, methods=['get'])
+    def reporte(self, request, pk=None):
+        """
+        Obtiene el reporte consolidado de la rutina.
+        
+        GET /api/rutinas/{id}/reporte/
+        
+        Returns:
+            Reporte consolidado con estadísticas
+        """
+        try:
+            rutina = self.get_object()
+            
+            if rutina.estado != 'completado':
+                return Response({
+                    'error': 'La rutina aún no ha sido completada'
+                }, status=status.HTTP_400_BAD_REQUEST)
+            
+            return Response({
+                'id_rutina': rutina.id_rutina,
+                'estado': rutina.estado,
+                'reporte': rutina.reporte_json,
+                'imagen_consolidada_url': request.build_absolute_uri(f'/media/{rutina.imagen_consolidada}') if rutina.imagen_consolidada else None
+            })
+            
+        except Exception as e:
+            logger.error(f"Error obteniendo reporte: {e}")
+            return Response({
+                'error': f'Error obteniendo reporte: {str(e)}'
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

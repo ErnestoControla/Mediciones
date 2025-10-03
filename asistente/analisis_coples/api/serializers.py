@@ -324,3 +324,93 @@ class EstadoCamaraSerializer(serializers.ModelSerializer):
             return f"{segundos // 60}m"
         else:
             return f"{segundos // 3600}h"
+
+
+class RutinaInspeccionSerializer(serializers.ModelSerializer):
+    """Serializer completo para RutinaInspeccion"""
+    
+    usuario_nombre = serializers.CharField(source='usuario.name', read_only=True)
+    configuracion_nombre = serializers.CharField(source='configuracion.nombre', read_only=True)
+    estado_display = serializers.CharField(source='get_estado_display', read_only=True)
+    imagen_consolidada_url = serializers.SerializerMethodField()
+    duracion_segundos = serializers.SerializerMethodField()
+    progreso = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = RutinaInspeccion
+        fields = [
+            'id', 'id_rutina', 'timestamp_inicio', 'timestamp_fin',
+            'estado', 'estado_display', 'usuario', 'usuario_nombre',
+            'configuracion', 'configuracion_nombre', 'num_imagenes_capturadas',
+            'imagen_consolidada', 'imagen_consolidada_url', 'reporte_json',
+            'duracion_segundos', 'progreso'
+        ]
+        read_only_fields = [
+            'id', 'id_rutina', 'timestamp_inicio', 'timestamp_fin',
+            'num_imagenes_capturadas', 'imagen_consolidada', 'reporte_json'
+        ]
+    
+    def get_imagen_consolidada_url(self, obj):
+        """Retorna la URL de la imagen consolidada si existe"""
+        if obj.imagen_consolidada:
+            request = self.context.get('request')
+            if request:
+                return request.build_absolute_uri(f'/media/{obj.imagen_consolidada}')
+            return f'/media/{obj.imagen_consolidada}'
+        return None
+    
+    def get_duracion_segundos(self, obj):
+        """Retorna la duración de la rutina en segundos"""
+        if obj.timestamp_fin and obj.timestamp_inicio:
+            delta = obj.timestamp_fin - obj.timestamp_inicio
+            return int(delta.total_seconds())
+        return None
+    
+    def get_progreso(self, obj):
+        """Retorna el progreso de la rutina (0-6)"""
+        return {
+            'actual': obj.num_imagenes_capturadas,
+            'total': 6,
+            'porcentaje': (obj.num_imagenes_capturadas / 6) * 100 if obj.num_imagenes_capturadas else 0
+        }
+
+
+class RutinaInspeccionListSerializer(serializers.ModelSerializer):
+    """Serializer simplificado para lista de rutinas"""
+    
+    usuario_nombre = serializers.CharField(source='usuario.name', read_only=True)
+    estado_display = serializers.CharField(source='get_estado_display', read_only=True)
+    duracion_segundos = serializers.SerializerMethodField()
+    num_defectos_totales = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = RutinaInspeccion
+        fields = [
+            'id', 'id_rutina', 'timestamp_inicio', 'timestamp_fin',
+            'estado', 'estado_display', 'usuario_nombre',
+            'num_imagenes_capturadas', 'duracion_segundos', 'num_defectos_totales'
+        ]
+    
+    def get_duracion_segundos(self, obj):
+        """Retorna la duración de la rutina en segundos"""
+        if obj.timestamp_fin and obj.timestamp_inicio:
+            delta = obj.timestamp_fin - obj.timestamp_inicio
+            return int(delta.total_seconds())
+        return None
+    
+    def get_num_defectos_totales(self, obj):
+        """Retorna el número total de defectos detectados"""
+        if obj.reporte_json and 'resumen' in obj.reporte_json:
+            return obj.reporte_json['resumen'].get('total_defectos', 0)
+        return 0
+
+
+class IniciarRutinaSerializer(serializers.Serializer):
+    """Serializer para iniciar una rutina"""
+    
+    configuracion_id = serializers.IntegerField(required=False, allow_null=True)
+    
+    def validate_configuracion_id(self, value):
+        if value and not ConfiguracionSistema.objects.filter(id=value).exists():
+            raise serializers.ValidationError("Configuración no encontrada")
+        return value

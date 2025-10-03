@@ -10,6 +10,7 @@ router.register(r'configuraciones', views.ConfiguracionSistemaViewSet)
 router.register(r'analisis', views.AnalisisCopleViewSet)
 router.register(r'estadisticas', views.EstadisticasSistemaViewSet)
 router.register(r'sistema', views.SistemaControlViewSet, basename='sistema')
+router.register(r'rutinas', views.RutinaInspeccionViewSet, basename='rutinas')
 
 app_name = 'analisis_coples_api'
 

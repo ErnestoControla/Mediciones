@@ -528,13 +528,14 @@ Para garantizar que las modificaciones sean pequeñas y probables, el agente deb
 - [ ] Suavizado de bordes
 - [ ] Integración en pipeline de análisis
 
-### **ETAPA 5: Rutina de Inspección Multi-Ángulo** 🔍
-- [ ] Modelo RutinaInspeccion
-- [ ] Lógica de captura secuencial (6 imágenes)
-- [ ] Análisis individual por imagen
-- [ ] Generación de imagen consolidada
-- [ ] Reporte consolidado
-- [ ] API para rutinas
+### **ETAPA 5: Rutina de Inspección Multi-Ángulo** ✅ COMPLETADA (2025-10-03)
+- [x] Modelo RutinaInspeccion
+- [x] Lógica de captura secuencial (6 imágenes automáticas cada 3s)
+- [x] Análisis individual por imagen (solo defectos)
+- [x] Generación de imagen consolidada (Grid 2x3 con etiquetas)
+- [x] Reporte consolidado (estadísticas por ángulo)
+- [x] API para rutinas (ViewSet + Serializers)
+- [x] Frontend completo con visualización de resultados
 
 ### **ETAPA 6: Gestión de Imágenes Temporales** 🖼️
 - [ ] Sistema de almacenamiento FIFO (últimas 10)

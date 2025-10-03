@@ -87,9 +87,10 @@ export interface ReporteResponse {
 export const rutinasAPI = {
   /**
    * Obtiene la lista de rutinas
+   * NOTA: Usa /analisis/api/ (no /api/analisis/) por la estructura de URLs de Django
    */
   getRutinas: async (): Promise<RutinaInspeccionList[]> => {
-    const response = await API.get('/analisis/rutinas/');
+    const response = await API.get('/analisis/api/rutinas/');
     return response.data;
   },
 
@@ -97,7 +98,7 @@ export const rutinasAPI = {
    * Obtiene una rutina por ID
    */
   getRutinaById: async (id: number): Promise<RutinaInspeccion> => {
-    const response = await API.get(`/analisis/rutinas/${id}/`);
+    const response = await API.get(`/analisis/api/rutinas/${id}/`);
     return response.data;
   },
 
@@ -105,7 +106,7 @@ export const rutinasAPI = {
    * Inicia una nueva rutina de inspección
    */
   iniciarRutina: async (data?: IniciarRutinaRequest): Promise<IniciarRutinaResponse> => {
-    const response = await API.post('/analisis/rutinas/iniciar/', data || {});
+    const response = await API.post('/analisis/api/rutinas/iniciar/', data || {});
     return response.data;
   },
 
@@ -114,7 +115,7 @@ export const rutinasAPI = {
    * NOTA: Esta operación toma ~18 segundos
    */
   ejecutarBarrido: async (rutinaId: number): Promise<EjecutarBarridoResponse> => {
-    const response = await API.post(`/analisis/rutinas/${rutinaId}/ejecutar_barrido/`);
+    const response = await API.post(`/analisis/api/rutinas/${rutinaId}/ejecutar_barrido/`);
     return response.data;
   },
 
@@ -122,7 +123,7 @@ export const rutinasAPI = {
    * Obtiene el estado actual de una rutina
    */
   getEstado: async (rutinaId: number): Promise<RutinaInspeccion> => {
-    const response = await API.get(`/analisis/rutinas/${rutinaId}/estado/`);
+    const response = await API.get(`/analisis/api/rutinas/${rutinaId}/estado/`);
     return response.data;
   },
 
@@ -130,7 +131,7 @@ export const rutinasAPI = {
    * Obtiene el reporte consolidado de una rutina
    */
   getReporte: async (rutinaId: number): Promise<ReporteResponse> => {
-    const response = await API.get(`/analisis/rutinas/${rutinaId}/reporte/`);
+    const response = await API.get(`/analisis/api/rutinas/${rutinaId}/reporte/`);
     return response.data;
   },
 };

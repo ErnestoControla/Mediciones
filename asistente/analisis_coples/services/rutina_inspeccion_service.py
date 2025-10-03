@@ -111,8 +111,9 @@ class RutinaInspeccionService:
         """
         Ejecuta el barrido automático de 6 ángulos.
         
-        NOTA: Este método es síncrono y bloqueará por ~18 segundos (6 fotos x 3s).
-        Para una implementación asíncrona, usar Celery o similar.
+        ESTRATEGIA DE 2 FASES (para prevenir segfaults en inferencias consecutivas):
+        FASE 1: Capturar 6 imágenes y guardarlas en disco
+        FASE 2: Analizar las 6 imágenes guardadas (una por una)
         
         Args:
             rutina_id: ID de la rutina
@@ -123,57 +124,89 @@ class RutinaInspeccionService:
         """
         try:
             rutina = RutinaInspeccion.objects.get(id=rutina_id)
-            analisis_ids = []
             
             logger.info(f"📸 Iniciando barrido automático para rutina {rutina.id_rutina}")
-            logger.info(f"   Se capturarán {self.num_angulos} imágenes con {self.delay_entre_capturas}s entre cada una")
+            logger.info(f"   FASE 1: Capturar {self.num_angulos} imágenes con {self.delay_entre_capturas}s entre cada una")
+            logger.info(f"   FASE 2: Analizar las {self.num_angulos} imágenes guardadas")
+            
+            # FASE 1: CAPTURA DE IMÁGENES
+            imagenes_capturadas = []
             
             for angulo in range(1, self.num_angulos + 1):
-                logger.info(f"\n🎬 Capturando ángulo {angulo}/{self.num_angulos}...")
+                logger.info(f"\n📸 FASE 1 - Capturando imagen {angulo}/{self.num_angulos}...")
                 
-                # Capturar y analizar imagen
-                resultado = self.segmentation_service.analizar_imagen(
-                    tipo_analisis='medicion_defectos',
-                    usuario=usuario,
-                    configuracion_id=rutina.configuracion_id if rutina.configuracion else None
-                )
-                
-                if 'error' in resultado:
-                    logger.error(f"❌ Error en ángulo {angulo}: {resultado['error']}")
-                    # Continuar con los demás ángulos
+                # Capturar imagen
+                estado_camara = self.segmentation_service.camera_service.obtener_estado()
+                if not estado_camara['activa']:
+                    logger.error(f"❌ Cámara no activa en ángulo {angulo}")
                     continue
                 
-                # Guardar ID del análisis (analisis_id es el ID numérico de BD)
-                analisis_ids.append(resultado['analisis_id'])
+                exito, imagen = self.segmentation_service.camera_service.capturar_imagen()
                 
-                # Actualizar contador de imágenes
+                if not exito or imagen is None:
+                    logger.error(f"❌ Error capturando imagen en ángulo {angulo}")
+                    continue
+                
+                # Guardar imagen temporalmente
+                imagenes_capturadas.append({
+                    'angulo': angulo,
+                    'imagen': imagen.copy(),  # Copiar para evitar referencias
+                    'timestamp': timezone.now()
+                })
+                
+                # Actualizar contador
                 rutina.num_imagenes_capturadas = angulo
                 rutina.save()
                 
-                logger.info(f"✅ Ángulo {angulo} completado: {resultado['id_analisis']}")
+                logger.info(f"✅ Imagen {angulo} capturada: {imagen.shape}")
                 
-                # Liberar recursos del segmentador para evitar acumulación de memoria
-                # y posibles segfaults en inferencias consecutivas
+                # Esperar antes de la siguiente captura
+                if angulo < self.num_angulos:
+                    logger.info(f"⏳ Esperando {self.delay_entre_capturas}s...")
+                    time.sleep(self.delay_entre_capturas)
+            
+            logger.info(f"\n✅ FASE 1 COMPLETADA: {len(imagenes_capturadas)} imágenes capturadas")
+            
+            # FASE 2: ANÁLISIS DE IMÁGENES
+            logger.info(f"\n🔍 FASE 2 - Analizando {len(imagenes_capturadas)} imágenes...")
+            analisis_ids = []
+            
+            for idx, imagen_data in enumerate(imagenes_capturadas):
+                angulo = imagen_data['angulo']
+                imagen = imagen_data['imagen']
+                
+                logger.info(f"\n🔬 Analizando imagen {idx + 1}/{len(imagenes_capturadas)} (Ángulo {angulo})...")
+                
+                # Analizar imagen (crea análisis en BD)
+                resultado = self._analizar_imagen_guardada(
+                    imagen=imagen,
+                    usuario=usuario,
+                    configuracion=rutina.configuracion,
+                    timestamp_captura=imagen_data['timestamp']
+                )
+                
+                if 'error' in resultado:
+                    logger.error(f"❌ Error analizando ángulo {angulo}: {resultado['error']}")
+                    continue
+                
+                analisis_ids.append(resultado['analisis_id'])
+                logger.info(f"✅ Ángulo {angulo} analizado: {resultado['id_analisis']}")
+                
+                # Liberar segmentador entre análisis
                 if self.segmentation_service.segmentador_defectos:
-                    logger.info(f"🧹 Liberando segmentador de defectos (evitar segfaults)...")
                     del self.segmentation_service.segmentador_defectos
                     self.segmentation_service.segmentador_defectos = None
                     import gc
                     gc.collect()
-                    logger.info(f"✅ Recursos liberados")
-                
-                # Esperar antes de la siguiente captura (excepto en la última)
-                if angulo < self.num_angulos:
-                    logger.info(f"⏳ Esperando {self.delay_entre_capturas}s antes del siguiente ángulo...")
-                    time.sleep(self.delay_entre_capturas)
             
-            logger.info(f"\n✅ Barrido completado: {len(analisis_ids)} ángulos capturados")
+            logger.info(f"\n✅ FASE 2 COMPLETADA: {len(analisis_ids)} imágenes analizadas")
+            logger.info(f"\n✅ Barrido total completado: {len(analisis_ids)} ángulos exitosos")
             
             return {
                 'success': True,
                 'analisis_ids': analisis_ids,
                 'num_capturas': len(analisis_ids),
-                'mensaje': f'Barrido completado: {len(analisis_ids)} imágenes capturadas'
+                'mensaje': f'Barrido completado: {len(analisis_ids)} imágenes capturadas y analizadas'
             }
             
         except RutinaInspeccion.DoesNotExist:
@@ -187,6 +220,89 @@ class RutinaInspeccionService:
                 'success': False,
                 'error': f'Error en barrido: {str(e)}'
             }
+    
+    def _analizar_imagen_guardada(
+        self,
+        imagen: np.ndarray,
+        usuario: Optional[User],
+        configuracion: Optional[ConfiguracionSistema],
+        timestamp_captura
+    ) -> Dict[str, Any]:
+        """
+        Analiza una imagen ya capturada (no captura nueva).
+        Similar a analizar_imagen pero usa imagen ya guardada.
+        """
+        try:
+            # Inicializar segmentador de defectos
+            if not self.segmentation_service._inicializar_segmentador('defectos'):
+                return {'error': 'Error inicializando segmentador de defectos'}
+            
+            # Configurar factor de conversión si existe
+            if configuracion and configuracion.factor_conversion_px_mm:
+                self.segmentation_service.measurement_service.set_conversion_factor(
+                    configuracion.factor_conversion_px_mm
+                )
+            
+            # Generar ID único
+            id_analisis = f"analisis_{uuid.uuid4().hex[:8]}_{int(time.time())}"
+            
+            # Crear registro en BD
+            analisis_db = AnalisisCople.objects.create(
+                id_analisis=id_analisis,
+                timestamp_captura=timestamp_captura,
+                tipo_analisis='medicion_defectos',
+                estado='procesando',
+                configuracion=configuracion,
+                usuario=usuario,
+                archivo_imagen="",
+                archivo_json="",
+                resolucion_ancho=imagen.shape[1],
+                resolucion_alto=imagen.shape[0],
+                resolucion_canales=imagen.shape[2] if len(imagen.shape) > 2 else 1,
+                tiempo_captura_ms=0.0,
+                tiempo_segmentacion_defectos_ms=0.0,
+                tiempo_segmentacion_piezas_ms=0.0,
+                tiempo_total_ms=0.0,
+                metadatos_json={}
+            )
+            
+            # Ejecutar segmentación
+            inicio_seg = time.time()
+            segmentaciones = self.segmentation_service.segmentador_defectos.segmentar(imagen)
+            tiempo_seg = (time.time() - inicio_seg) * 1000
+            analisis_db.tiempo_segmentacion_defectos_ms = tiempo_seg
+            
+            # Guardar segmentaciones
+            self.segmentation_service._guardar_segmentaciones_defectos(
+                analisis_db, segmentaciones, configuracion
+            )
+            
+            # Generar imagen procesada
+            imagen_procesada = self.segmentation_service._generar_imagen_procesada(
+                imagen, segmentaciones, 'medicion_defectos'
+            )
+            
+            # Guardar imagen procesada
+            if imagen_procesada is not None:
+                self.segmentation_service._guardar_imagen_procesada(
+                    analisis_db, imagen_procesada
+                )
+            
+            # Finalizar
+            analisis_db.tiempo_total_ms = tiempo_seg
+            analisis_db.estado = 'completado'
+            analisis_db.save()
+            
+            return {
+                'id_analisis': id_analisis,
+                'analisis_id': analisis_db.id,
+                'estado': 'completado',
+                'segmentaciones_count': len(segmentaciones) if segmentaciones else 0
+            }
+            
+        except Exception as e:
+            logger.error(f"❌ Error analizando imagen: {e}", exc_info=True)
+            return {'error': str(e)}
     
     def finalizar_rutina(
         self,

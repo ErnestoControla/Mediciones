@@ -37,6 +37,14 @@ export interface RutinaInspeccionList {
   num_defectos_totales: number;
 }
 
+export interface AnguloReporte {
+  angulo_num: number;
+  id_analisis: string;
+  num_defectos: number;
+  tiempo_ms: number;
+  timestamp: string;
+}
+
 export interface ReporteConsolidado {
   id_rutina: string;
   num_angulos: number;
@@ -47,14 +55,6 @@ export interface ReporteConsolidado {
     promedio_defectos: number;
     tiempo_total_ms: number;
   };
-}
-
-export interface AnguloReporte {
-  angulo_num: number;
-  id_analisis: string;
-  num_defectos: number;
-  tiempo_ms: number;
-  timestamp: string;
 }
 
 export interface IniciarRutinaRequest {

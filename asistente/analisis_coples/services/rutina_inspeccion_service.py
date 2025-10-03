@@ -333,13 +333,13 @@ class RutinaInspeccionService:
                     continue
             
             # Guardar imagen consolidada
-            media_dir = settings.MEDIA_ROOT / 'rutinas'
-            media_dir.mkdir(parents=True, exist_ok=True)
+            media_dir = os.path.join(settings.MEDIA_ROOT, 'rutinas')
+            os.makedirs(media_dir, exist_ok=True)
             
             filename = f"rutina_{rutina.id_rutina}_consolidada.jpg"
-            filepath = media_dir / filename
+            filepath = os.path.join(media_dir, filename)
             
-            cv2.imwrite(str(filepath), grid_image)
+            cv2.imwrite(filepath, grid_image)
             
             logger.info(f"✅ Imagen consolidada guardada: {filename}")
             

@@ -209,7 +209,7 @@ const RutinaInspeccionPage: React.FC = () => {
       {rutina && pasoActual === 4 && reporte && (
         <Grid container spacing={3} sx={{ mt: 1 }}>
           {/* Información de la rutina */}
-          <Grid item xs={12}>
+          <Grid size={{ xs: 12 }}>
             <Card>
               <CardHeader
                 title="Información de la Rutina"
@@ -217,7 +217,7 @@ const RutinaInspeccionPage: React.FC = () => {
               />
               <CardContent>
                 <Grid container spacing={2}>
-                  <Grid item xs={12} sm={6} md={3}>
+                  <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                     <Typography variant="caption" color="text.secondary">
                       ID Rutina
                     </Typography>
@@ -225,7 +225,7 @@ const RutinaInspeccionPage: React.FC = () => {
                       {rutina.id_rutina}
                     </Typography>
                   </Grid>
-                  <Grid item xs={12} sm={6} md={3}>
+                  <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                     <Typography variant="caption" color="text.secondary">
                       Estado
                     </Typography>
@@ -237,7 +237,7 @@ const RutinaInspeccionPage: React.FC = () => {
                       />
                     </Box>
                   </Grid>
-                  <Grid item xs={12} sm={6} md={3}>
+                  <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                     <Typography variant="caption" color="text.secondary">
                       Imágenes Capturadas
                     </Typography>
@@ -245,7 +245,7 @@ const RutinaInspeccionPage: React.FC = () => {
                       {rutina.num_imagenes_capturadas} / 6
                     </Typography>
                   </Grid>
-                  <Grid item xs={12} sm={6} md={3}>
+                  <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                     <Typography variant="caption" color="text.secondary">
                       Duración Total
                     </Typography>
@@ -260,7 +260,7 @@ const RutinaInspeccionPage: React.FC = () => {
 
           {/* Imagen consolidada */}
           {imagenConsolidadaUrl && (
-            <Grid item xs={12} lg={6}>
+            <Grid size={{ xs: 12, lg: 6 }}>
               <Card>
                 <CardHeader title="Imagen Consolidada (Grid 2x3)" />
                 <CardContent>
@@ -281,7 +281,7 @@ const RutinaInspeccionPage: React.FC = () => {
           )}
 
           {/* Resumen estadístico */}
-          <Grid item xs={12} lg={6}>
+          <Grid size={{ xs: 12, lg: 6 }}>
             <Card>
               <CardHeader
                 title="Resumen de Defectos"
@@ -298,7 +298,7 @@ const RutinaInspeccionPage: React.FC = () => {
                 </Box>
 
                 <Grid container spacing={2}>
-                  <Grid item xs={6}>
+                  <Grid size={{ xs: 6 }}>
                     <Typography variant="caption" color="text.secondary">
                       Promedio por ángulo
                     </Typography>
@@ -306,7 +306,7 @@ const RutinaInspeccionPage: React.FC = () => {
                       {reporte.resumen.promedio_defectos.toFixed(1)}
                     </Typography>
                   </Grid>
-                  <Grid item xs={6}>
+                  <Grid size={{ xs: 6 }}>
                     <Typography variant="caption" color="text.secondary">
                       Tiempo total procesamiento
                     </Typography>
@@ -341,7 +341,7 @@ const RutinaInspeccionPage: React.FC = () => {
           </Grid>
 
           {/* Tabla detallada por ángulo */}
-          <Grid item xs={12}>
+          <Grid size={{ xs: 12 }}>
             <Card>
               <CardHeader title="Detalle por Ángulo" />
               <CardContent>
@@ -385,7 +385,7 @@ const RutinaInspeccionPage: React.FC = () => {
           </Grid>
 
           {/* Botón para nueva rutina */}
-          <Grid item xs={12}>
+          <Grid size={{ xs: 12 }}>
             <Box sx={{ textAlign: 'center' }}>
               <Button
                 variant="outlined"

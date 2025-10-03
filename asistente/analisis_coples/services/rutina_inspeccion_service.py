@@ -150,10 +150,27 @@ class RutinaInspeccionService:
                     logger.error(f"❌ Error capturando imagen en ángulo {angulo}")
                     continue
                 
-                # Guardar imagen en disco (libera RAM inmediatamente)
-                filename = f"angulo_{angulo}.jpg"
+                # Guardar imagen en disco (PNG sin pérdida, evita corrupción de JPEG)
+                filename = f"angulo_{angulo}.png"
                 filepath = os.path.join(temp_dir, filename)
-                cv2.imwrite(filepath, imagen)
+                
+                # Verificar imagen antes de guardar
+                logger.info(f"   📊 Imagen a guardar: shape={imagen.shape}, dtype={imagen.dtype}, min={imagen.min()}, max={imagen.max()}")
+                
+                # Guardar en PNG (sin compresión/pérdida)
+                exito_guardado = cv2.imwrite(filepath, imagen)
+                
+                if not exito_guardado:
+                    logger.error(f"❌ Error guardando imagen {angulo}")
+                    continue
+                
+                # Verificar que se guardó correctamente leyendo de vuelta
+                test_read = cv2.imread(filepath)
+                if test_read is None:
+                    logger.error(f"❌ Imagen {angulo} corrupta en disco, no se puede leer")
+                    continue
+                
+                logger.info(f"   ✅ Verificación: imagen leída correctamente, shape={test_read.shape}")
                 
                 imagenes_paths.append({
                     'angulo': angulo,
@@ -165,7 +182,7 @@ class RutinaInspeccionService:
                 rutina.num_imagenes_capturadas = angulo
                 rutina.save()
                 
-                logger.info(f"✅ Imagen {angulo} guardada en disco: {filename}")
+                logger.info(f"✅ Imagen {angulo} guardada y verificada en disco: {filename}")
                 
                 # Esperar antes de la siguiente captura (delay corto, solo captura)
                 if angulo < self.num_angulos:
@@ -190,6 +207,24 @@ class RutinaInspeccionService:
                 if imagen is None:
                     logger.error(f"❌ Error leyendo imagen desde {filepath}")
                     continue
+                
+                # Verificar integridad de la imagen leída
+                logger.info(f"   📊 Imagen leída: shape={imagen.shape}, dtype={imagen.dtype}, min={imagen.min()}, max={imagen.max()}")
+                
+                # Validar que la imagen sea correcta
+                if imagen.shape != (640, 640, 3):
+                    logger.error(f"❌ Imagen con shape incorrecto: {imagen.shape}, esperado (640, 640, 3)")
+                    continue
+                
+                if imagen.dtype != np.uint8:
+                    logger.error(f"❌ Imagen con dtype incorrecto: {imagen.dtype}, esperado uint8")
+                    continue
+                
+                if np.isnan(imagen).any() or np.isinf(imagen).any():
+                    logger.error(f"❌ Imagen contiene NaN o Inf")
+                    continue
+                
+                logger.info(f"   ✅ Imagen válida, procediendo con análisis...")
                 
                 # Analizar imagen (crea análisis en BD)
                 resultado = self._analizar_imagen_guardada(

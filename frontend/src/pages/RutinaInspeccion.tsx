@@ -30,7 +30,8 @@ import {
   Assessment,
 } from '@mui/icons-material';
 import Swal from 'sweetalert2';
-import { rutinasAPI, RutinaInspeccion, ReporteConsolidado } from '../api/rutinas';
+import { rutinasAPI } from '../api/rutinas';
+import type { RutinaInspeccion, ReporteConsolidado } from '../api/rutinas';
 
 const RutinaInspeccionPage: React.FC = () => {
   const [ejecutando, setEjecutando] = useState(false);

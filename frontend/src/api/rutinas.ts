@@ -1,7 +1,7 @@
 // src/api/rutinas.ts
 import API from './axios';
 
-// Interfaces base (deben estar primero por dependencias)
+// Interfaces para Rutina de Inspección Multi-Ángulo
 export interface AnguloReporte {
   angulo_num: number;
   id_analisis: string;

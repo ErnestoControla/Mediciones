@@ -1,6 +1,28 @@
 // src/api/rutinas.ts
 import API from './axios';
 
+// Interfaces base (deben estar primero por dependencias)
+export interface AnguloReporte {
+  angulo_num: number;
+  id_analisis: string;
+  num_defectos: number;
+  tiempo_ms: number;
+  timestamp: string;
+}
+
+export interface ReporteConsolidado {
+  id_rutina: string;
+  num_angulos: number;
+  angulos: AnguloReporte[];
+  resumen: {
+    total_defectos: number;
+    defectos_por_angulo: number[];
+    promedio_defectos: number;
+    tiempo_total_ms: number;
+  };
+}
+
+// Interfaces principales
 export interface RutinaInspeccion {
   id: number;
   id_rutina: string;
@@ -35,26 +57,6 @@ export interface RutinaInspeccionList {
   num_imagenes_capturadas: number;
   duracion_segundos: number | null;
   num_defectos_totales: number;
-}
-
-export interface AnguloReporte {
-  angulo_num: number;
-  id_analisis: string;
-  num_defectos: number;
-  tiempo_ms: number;
-  timestamp: string;
-}
-
-export interface ReporteConsolidado {
-  id_rutina: string;
-  num_angulos: number;
-  angulos: AnguloReporte[];
-  resumen: {
-    total_defectos: number;
-    defectos_por_angulo: number[];
-    promedio_defectos: number;
-    tiempo_total_ms: number;
-  };
 }
 
 export interface IniciarRutinaRequest {

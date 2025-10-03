@@ -152,6 +152,16 @@ class RutinaInspeccionService:
                 
                 logger.info(f"✅ Ángulo {angulo} completado: {resultado['id_analisis']}")
                 
+                # Liberar recursos del segmentador para evitar acumulación de memoria
+                # y posibles segfaults en inferencias consecutivas
+                if self.segmentation_service.segmentador_defectos:
+                    logger.info(f"🧹 Liberando segmentador de defectos (evitar segfaults)...")
+                    del self.segmentation_service.segmentador_defectos
+                    self.segmentation_service.segmentador_defectos = None
+                    import gc
+                    gc.collect()
+                    logger.info(f"✅ Recursos liberados")
+                
                 # Esperar antes de la siguiente captura (excepto en la última)
                 if angulo < self.num_angulos:
                     logger.info(f"⏳ Esperando {self.delay_entre_capturas}s antes del siguiente ángulo...")

@@ -14,7 +14,6 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { analisisAPI } from '../api/analisis';
 import type { AnalisisCopleList } from '../api/analisis';
-import API from '../api/axios';
 import AnalisisCard from '../components/AnalisisCard';
 import Swal from 'sweetalert2';
 
@@ -55,18 +54,16 @@ const AnalisisCoples: React.FC = () => {
         return;
       }
 
-      // Extraer la ruta relativa de la URL completa
-      // Ej: http://localhost:8000/media/analisis/xxx.jpg -> /media/analisis/xxx.jpg
-      const url = new URL(analisis.imagen_procesada_url);
-      const imagePath = url.pathname;
-
-      // Descargar usando axios con responseType blob
-      const response = await API.get(imagePath, {
-        responseType: 'blob'
-      });
+      // Usar fetch directamente con la URL completa (evita problemas con baseURL de axios)
+      const response = await fetch(analisis.imagen_procesada_url);
       
-      // Crear blob URL
-      const blob = new Blob([response.data], { type: 'image/jpeg' });
+      if (!response.ok) {
+        throw new Error(`Error al descargar: ${response.status} ${response.statusText}`);
+      }
+      
+      const blob = await response.blob();
+      
+      // Crear blob URL para descarga
       const blobUrl = window.URL.createObjectURL(blob);
       
       // Crear elemento <a> temporal para descargar
@@ -89,8 +86,7 @@ const AnalisisCoples: React.FC = () => {
       });
     } catch (error: any) {
       console.error('Error descargando imagen:', error);
-      console.error('Error details:', error.response?.data);
-      Swal.fire('Error', `No se pudo descargar la imagen procesada: ${error.message}`, 'error');
+      Swal.fire('Error', `No se pudo descargar la imagen: ${error.message}`, 'error');
     }
   };
 

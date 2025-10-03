@@ -12,7 +12,7 @@ from datetime import datetime, timedelta
 import logging
 import os
 
-from ..models import ConfiguracionSistema, AnalisisCople
+from ..models import ConfiguracionSistema, AnalisisCople, RutinaInspeccion
 from ..resultados_models import EstadisticasSistema
 from ..services_real import servicio_analisis_real as servicio_analisis
 from .serializers import (

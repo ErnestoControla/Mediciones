@@ -10,6 +10,7 @@ import AnalisisCoples from './pages/AnalisisCoples';
 import ConfiguracionesAnalisis from './pages/ConfiguracionesAnalisis';
 import DetalleAnalisis from './pages/DetalleAnalisis';
 import ControlCamara from './pages/ControlCamara';
+import RutinaInspeccion from './pages/RutinaInspeccion';
 import AdminRoute from './components/AdminRoute';
 import PrivateRoute from './components/PrivateRoute';
 
@@ -39,6 +40,7 @@ function App() {
           <Route path="/analisis" element={<AnalisisCoples />} />
           <Route path="/analisis/configuraciones" element={<ConfiguracionesAnalisis />} />
           <Route path="/analisis/:id" element={<DetalleAnalisis />} />
+          <Route path="/rutina-inspeccion" element={<RutinaInspeccion />} />
           {/* Aquí más rutas internas protegidas */}
         </Route>
       </Route>

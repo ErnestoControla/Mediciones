@@ -23,6 +23,7 @@ import LogoutIcon from "@mui/icons-material/Logout";
 import LightModeIcon from "@mui/icons-material/LightMode";
 import DarkModeIcon from "@mui/icons-material/DarkMode";
 import VideocamIcon from "@mui/icons-material/Videocam";
+import ThreeSixtyIcon from "@mui/icons-material/ThreeSixty";
 import { Link as RouterLink, Outlet } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { ColorModeContext } from "../theme";
@@ -33,6 +34,7 @@ const baseMenu = [
   { text: "Inicio",   icon: <HomeIcon />,   to: "/" },
   { text: "Control de Cámara", icon: <VideocamIcon />, to: "/camara" },
   { text: "Análisis de Coples", icon: <AssessmentIcon />, to: "/analisis" },
+  { text: "Rutina de Inspección", icon: <ThreeSixtyIcon />, to: "/rutina-inspeccion" },
   { text: "Configuraciones", icon: <SettingsIcon />, to: "/analisis/configuraciones" },
   { text: "Usuarios", icon: <PeopleIcon />, to: "/usuarios" },
 ];

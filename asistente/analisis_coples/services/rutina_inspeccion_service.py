@@ -44,7 +44,7 @@ class RutinaInspeccionService:
         """Inicializa el servicio"""
         self.segmentation_service = get_segmentation_analysis_service()
         self.num_angulos = 6  # Número de ángulos a capturar
-        self.delay_entre_capturas = 3  # Segundos entre capturas
+        self.delay_entre_capturas = 5  # Segundos entre capturas (aumentado para prevenir segfaults)
     
     def iniciar_rutina(
         self,

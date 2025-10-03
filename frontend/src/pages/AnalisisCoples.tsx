@@ -54,17 +54,27 @@ const AnalisisCoples: React.FC = () => {
         return;
       }
 
-      // Crear un elemento <a> temporal para descargar la imagen
+      // Fetch la imagen como blob para forzar descarga
+      const response = await fetch(analisis.imagen_procesada_url);
+      const blob = await response.blob();
+      
+      // Crear URL temporal del blob
+      const blobUrl = window.URL.createObjectURL(blob);
+      
+      // Crear elemento <a> temporal para descargar
       const link = document.createElement('a');
-      link.href = analisis.imagen_procesada_url;
+      link.href = blobUrl;
       link.download = `analisis_${analisis.id_analisis}_procesado.jpg`;
       document.body.appendChild(link);
       link.click();
+      
+      // Limpiar
       document.body.removeChild(link);
+      window.URL.revokeObjectURL(blobUrl);
 
       Swal.fire({
-        title: '✅ Descarga Iniciada',
-        text: 'La imagen procesada se está descargando',
+        title: '✅ Descarga Completada',
+        text: 'La imagen procesada se ha descargado',
         icon: 'success',
         timer: 2000,
         showConfirmButton: false

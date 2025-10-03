@@ -345,24 +345,39 @@ class SegmentadorDefectosCoples:
                         print(f"      📊 mask_protos shape: {mask_protos.shape}")
                         print(f"      📊 bbox: ({x1}, {y1}, {x2}, {y2})")
                         
-                        # TEMPORAL: Crear máscara simple (bbox completo) para evitar crash
-                        print(f"      ⚠️  USANDO MÁSCARA SIMPLE (TEMPORAL)")
-                        mask = np.zeros((640, 640), dtype=np.float32)
-                        x1_int, y1_int, x2_int, y2_int = int(x1), int(y1), int(x2), int(y2)
-                        mask[y1_int:y2_int, x1_int:x2_int] = 1.0
-                        mask_area = int(np.sum(mask > 0.5))
+                        # INTENTO 1: Copiar arrays para evitar problemas de ownership
+                        print(f"      🔄 Copiando arrays de ONNX...")
+                        mask_coeff_copy = np.array(mask_coeff, dtype=np.float32, copy=True)
+                        mask_protos_copy = np.array(mask_protos, dtype=np.float32, copy=True)
                         
-                        print(f"      ✅ Máscara simple creada: {mask.shape}, área: {mask_area}")
+                        print(f"      ✅ Arrays copiados")
+                        print(f"      🧪 Intentando generar máscara con prototipos...")
                         
-                        # TODO: Descomentar cuando se resuelva el crash
-                        # mask = self._generate_mask(mask_coeff, mask_protos, (x1, y1, x2, y2), (640, 640))
-                        # mask_area = int(np.sum(mask > 0.5)) if mask is not None else 0
+                        mask = self._generate_mask(mask_coeff_copy, mask_protos_copy, (x1, y1, x2, y2), (640, 640))
+                        
+                        if mask is not None:
+                            mask_area = int(np.sum(mask > 0.5))
+                            print(f"      ✅ Máscara con prototipos generada: {mask.shape}, área: {mask_area}")
+                        else:
+                            print(f"      ⚠️  _generate_mask retornó None, usando fallback")
+                            mask = np.zeros((640, 640), dtype=np.float32)
+                            x1_int, y1_int, x2_int, y2_int = int(x1), int(y1), int(x2), int(y2)
+                            mask[y1_int:y2_int, x1_int:x2_int] = 1.0
+                            mask_area = int(np.sum(mask > 0.5))
+                            print(f"      ✅ Máscara fallback creada: {mask.shape}, área: {mask_area}")
+                        
                     except Exception as e:
                         print(f"   ⚠️  Error generando máscara: {e}")
                         import traceback
                         traceback.print_exc()
-                        mask = None
-                        mask_area = 0
+                        
+                        # Fallback: máscara simple
+                        print(f"      🔄 Usando máscara simple (fallback)...")
+                        mask = np.zeros((640, 640), dtype=np.float32)
+                        x1_int, y1_int, x2_int, y2_int = int(x1), int(y1), int(x2), int(y2)
+                        mask[y1_int:y2_int, x1_int:x2_int] = 1.0
+                        mask_area = int(np.sum(mask > 0.5))
+                        print(f"      ✅ Máscara fallback creada: {mask.shape}, área: {mask_area}")
                     
                     # Crear segmentación con máscaras reales (SIN CONVERSIÓN A LISTA)
                     segmentacion = {

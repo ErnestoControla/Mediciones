@@ -14,6 +14,7 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { analisisAPI } from '../api/analisis';
 import type { AnalisisCopleList } from '../api/analisis';
+import API from '../api/axios';
 import AnalisisCard from '../components/AnalisisCard';
 import Swal from 'sweetalert2';
 
@@ -54,11 +55,18 @@ const AnalisisCoples: React.FC = () => {
         return;
       }
 
-      // Fetch la imagen como blob para forzar descarga
-      const response = await fetch(analisis.imagen_procesada_url);
-      const blob = await response.blob();
+      // Extraer la ruta relativa de la URL completa
+      // Ej: http://localhost:8000/media/analisis/xxx.jpg -> /media/analisis/xxx.jpg
+      const url = new URL(analisis.imagen_procesada_url);
+      const imagePath = url.pathname;
+
+      // Descargar usando axios con responseType blob
+      const response = await API.get(imagePath, {
+        responseType: 'blob'
+      });
       
-      // Crear URL temporal del blob
+      // Crear blob URL
+      const blob = new Blob([response.data], { type: 'image/jpeg' });
       const blobUrl = window.URL.createObjectURL(blob);
       
       // Crear elemento <a> temporal para descargar
@@ -79,9 +87,10 @@ const AnalisisCoples: React.FC = () => {
         timer: 2000,
         showConfirmButton: false
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error descargando imagen:', error);
-      Swal.fire('Error', 'No se pudo descargar la imagen procesada', 'error');
+      console.error('Error details:', error.response?.data);
+      Swal.fire('Error', `No se pudo descargar la imagen procesada: ${error.message}`, 'error');
     }
   };
 

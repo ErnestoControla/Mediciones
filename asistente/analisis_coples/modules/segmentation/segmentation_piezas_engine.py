@@ -267,9 +267,10 @@ class SegmentadorPiezasCoples:
         print(f"   🔍 DEBUG: Hay {len(outputs)} outputs")
         
         if len(outputs) >= 2:
-            # YOLO11-SEG tiene 2 outputs: bboxes + prototipos de máscaras
-            detections = outputs[0]  # (1, 37, 8400) - Bboxes + confianza + coeficientes
-            mask_protos = outputs[1]  # (1, 32, 160, 160) - Prototipos de máscaras
+            # CRÍTICO: Copiar outputs de ONNX inmediatamente para evitar segfaults
+            # ONNX Runtime no garantiza ownership de memoria, causando crashes en operaciones NumPy
+            detections = np.array(outputs[0], copy=True)  # (1, 37, 8400) - Bboxes + confianza + coeficientes
+            mask_protos = np.array(outputs[1], copy=True)  # (1, 32, 160, 160) - Prototipos de máscaras
             
             print(f"   ✅ DEBUG: Output 0 (detections): {detections.shape}")
             print(f"   ✅ DEBUG: Output 1 (mask_protos): {mask_protos.shape}")
@@ -280,27 +281,36 @@ class SegmentadorPiezasCoples:
                 return segmentaciones
             
             # Transponer para facilitar procesamiento: (1, 37, 8400) -> (8400, 37)
+            print(f"   📍 Transponiendo detections...")
             predictions = detections[0].transpose()  # Shape: (8400, 37)
+            print(f"   ✅ Transposición exitosa: {predictions.shape}")
             
             # Separar componentes
+            print(f"   📍 Separando componentes (boxes, confidences, mask_coeffs)...")
             boxes = predictions[:, :4]  # [x_center, y_center, width, height]
             confidences = predictions[:, 4]  # Puntuaciones de confianza
             mask_coeffs = predictions[:, 5:37]  # 32 coeficientes de máscara
+            print(f"   ✅ Componentes separados")
             
             print(f"   🔍 DEBUG: Boxes shape: {boxes.shape}")
             print(f"   🔍 DEBUG: Confidences shape: {confidences.shape}")
             print(f"   🔍 DEBUG: Mask coefficients shape: {mask_coeffs.shape}")
             
             # Aplicar sigmoid a las confianzas
+            print(f"   📍 Aplicando sigmoid a confidences...")
             confidences = self._sigmoid(confidences)
+            print(f"   ✅ Sigmoid aplicado")
             
             # Filtrar por confianza mínima
+            print(f"   📍 Filtrando por confianza mínima ({self.confianza_min})...")
             valid_indices = confidences > self.confianza_min
+            print(f"   ✅ Filtrado completado")
             
             if not np.any(valid_indices):
                 print(f"   ❌ No se encontraron detecciones con confianza > {self.confianza_min}")
                 return segmentaciones
             
+            print(f"   📍 Aplicando filtro a boxes, confidences, mask_coeffs...")
             boxes = boxes[valid_indices]
             confidences = confidences[valid_indices]
             mask_coeffs = mask_coeffs[valid_indices]
@@ -308,15 +318,19 @@ class SegmentadorPiezasCoples:
             print(f"   ✅ {len(boxes)} detecciones pasaron el filtro de confianza")
             
             # Convertir formato de cajas de center_x, center_y, width, height a x1, y1, x2, y2
+            print(f"   📍 Convirtiendo boxes a formato xyxy...")
             boxes_xyxy = self._convert_to_xyxy(boxes)
+            print(f"   ✅ Conversión exitosa: {boxes_xyxy.shape}")
             
             # Aplicar Non-Maximum Suppression
+            print(f"   📍 Aplicando NMS...")
             indices = cv2.dnn.NMSBoxes(
                 boxes_xyxy.tolist(), 
                 confidences.tolist(), 
                 self.confianza_min, 
                 0.35  # IoU threshold
             )
+            print(f"   ✅ NMS completado")
             
             if len(indices) > 0:
                 indices = indices.flatten()[:30]  # max_det
@@ -346,8 +360,6 @@ class SegmentadorPiezasCoples:
                             mask = np.zeros((640, 640), dtype=np.float32)
                             x1_int, y1_int, x2_int, y2_int = int(x1), int(y1), int(x2), int(y2)
                             mask[y1_int:y2_int, x1_int:x2_int] = 1.0
-                            mask_area = int(np.sum(mask > 0.5))
-                            print(f"      ✅ Máscara fallback creada: {mask.shape}, área: {mask_area}")
                         
                     except Exception as e:
                         print(f"   ⚠️  Error generando máscara: {e}")
@@ -355,12 +367,12 @@ class SegmentadorPiezasCoples:
                         traceback.print_exc()
                         
                         # Fallback: máscara simple
-                        print(f"      🔄 Usando máscara simple (fallback)...")
                         mask = np.zeros((640, 640), dtype=np.float32)
                         x1_int, y1_int, x2_int, y2_int = int(x1), int(y1), int(x2), int(y2)
                         mask[y1_int:y2_int, x1_int:x2_int] = 1.0
-                        mask_area = int(np.sum(mask > 0.5))
-                        print(f"      ✅ Máscara fallback creada: {mask.shape}, área: {mask_area}")
+                    
+                    # Calcular área de la máscara (siempre, independientemente del método usado)
+                    mask_area = int(np.sum(mask > 0.5))
                     
                     # Calcular dimensiones reales de la máscara
                     if mask is not None:

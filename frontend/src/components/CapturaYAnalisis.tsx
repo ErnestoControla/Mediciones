@@ -86,17 +86,28 @@ const CapturaYAnalisis: React.FC = () => {
     }
   };
 
-  const handleAnalizar = async () => {
+  const handleCapturarYAnalizar = async () => {
+    setCapturando(true);
     setAnalizando(true);
     setError(null);
 
     try {
-      // Ejecutar análisis con el tipo seleccionado
-      const response = await API.post('/analisis/resultados/', {
+      // Paso 1: Capturar imagen
+      const capturaResponse = await API.post('/analisis/sistema/capturar/');
+
+      if (!capturaResponse.data.exito) {
+        throw new Error(capturaResponse.data.error || 'Error capturando imagen');
+      }
+
+      setImagenCapturada(capturaResponse.data.imagen_url);
+      setTimestampCaptura(capturaResponse.data.timestamp);
+      
+      // Paso 2: Analizar automáticamente
+      const analisisResponse = await API.post('/analisis/resultados/', {
         tipo_analisis: tipoAnalisis
       });
 
-      const analisis = response.data;
+      const analisis = analisisResponse.data;
       setUltimoAnalisis({
         id: analisis.id,
         tipo_analisis: analisis.tipo_analisis_display,
@@ -109,7 +120,7 @@ const CapturaYAnalisis: React.FC = () => {
       });
 
       await Swal.fire({
-        title: '✅ Análisis Completado',
+        title: '✅ Captura y Análisis Completado',
         html: `
           <p><strong>Tipo:</strong> ${analisis.tipo_analisis_display || 'N/A'}</p>
           <p><strong>Segmentaciones:</strong> ${
@@ -120,17 +131,12 @@ const CapturaYAnalisis: React.FC = () => {
           <p style="margin-top: 10px; color: #4caf50;">
             ✨ Mediciones calculadas automáticamente
           </p>
-          <a href="/admin/analisis_coples/analisiscople/${analisis.id}/change/" 
-             target="_blank"
-             style="display: inline-block; margin-top: 10px; color: #2196f3; text-decoration: none;">
-            📊 Ver detalles en admin →
-          </a>
         `,
         icon: 'success'
       });
 
     } catch (err: any) {
-      const errorMsg = err.response?.data?.error || err.message || 'Error en análisis';
+      const errorMsg = err.response?.data?.error || err.message || 'Error en el proceso';
       setError(errorMsg);
       
       await Swal.fire({
@@ -139,6 +145,7 @@ const CapturaYAnalisis: React.FC = () => {
         icon: 'error'
       });
     } finally {
+      setCapturando(false);
       setAnalizando(false);
     }
   };
@@ -172,30 +179,20 @@ const CapturaYAnalisis: React.FC = () => {
             </Select>
           </FormControl>
 
-          {/* Botones de acción */}
-          <Stack direction="row" spacing={2}>
-            <Button
-              variant="contained"
-              color="primary"
-              startIcon={capturando ? <CircularProgress size={20} /> : <CameraAlt />}
-              onClick={handleCapturar}
-              disabled={capturando || analizando}
-              fullWidth
-            >
-              {capturando ? 'Capturando...' : 'Capturar'}
-            </Button>
-
-            <Button
-              variant="contained"
-              color="success"
-              startIcon={analizando ? <CircularProgress size={20} /> : <Analytics />}
-              onClick={handleAnalizar}
-              disabled={capturando || analizando}
-              fullWidth
-            >
-              {analizando ? 'Analizando...' : 'Analizar'}
-            </Button>
-          </Stack>
+          {/* Botón de acción combinado */}
+          <Button
+            variant="contained"
+            color="primary"
+            size="large"
+            startIcon={(capturando || analizando) ? <CircularProgress size={20} /> : <Analytics />}
+            onClick={handleCapturarYAnalizar}
+            disabled={capturando || analizando}
+            fullWidth
+            sx={{ py: 1.5 }}
+          >
+            {capturando && analizando ? '📸 Capturando y Analizando...' : 
+             '📸 Capturar y Analizar'}
+          </Button>
 
           {/* Imagen capturada */}
           {imagenCapturada && (

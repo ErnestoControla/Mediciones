@@ -44,9 +44,35 @@ const AnalisisCoples: React.FC = () => {
     navigate(`/analisis/${id}`);
   };
 
-  const handleDescargarAnalisis = (id: number) => {
-    // Implementar descarga de resultados
-    console.log('Descargar análisis:', id);
+  const handleDescargarAnalisis = async (id: number) => {
+    try {
+      // Obtener el análisis para conseguir la URL de la imagen procesada
+      const analisis = await analisisAPI.getAnalisisById(id);
+      
+      if (!analisis.imagen_procesada_url) {
+        Swal.fire('Error', 'No hay imagen procesada disponible para este análisis', 'error');
+        return;
+      }
+
+      // Crear un elemento <a> temporal para descargar la imagen
+      const link = document.createElement('a');
+      link.href = analisis.imagen_procesada_url;
+      link.download = `analisis_${analisis.id_analisis}_procesado.jpg`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      Swal.fire({
+        title: '✅ Descarga Iniciada',
+        text: 'La imagen procesada se está descargando',
+        icon: 'success',
+        timer: 2000,
+        showConfirmButton: false
+      });
+    } catch (error) {
+      console.error('Error descargando imagen:', error);
+      Swal.fire('Error', 'No se pudo descargar la imagen procesada', 'error');
+    }
   };
 
   if (loading) {

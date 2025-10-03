@@ -10,6 +10,7 @@ import {
   LinearProgress,
   IconButton,
   Tooltip,
+  Button,
 } from '@mui/material';
 import {
   CheckCircle,
@@ -82,7 +83,7 @@ const AnalisisCard: React.FC<AnalisisCardProps> = ({
     <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
       <CardHeader
         title={
-          <Box display="flex" alignItems="center" gap={1}>
+          <Box display="flex" alignItems="center" gap={1} flexWrap="wrap">
             <Typography variant="h6" component="div" noWrap>
               {analisis.id_analisis}
             </Typography>
@@ -104,34 +105,9 @@ const AnalisisCard: React.FC<AnalisisCardProps> = ({
             </Typography>
           </Box>
         }
-        action={
-          <Box display="flex" gap={1}>
-            {onView && (
-              <Tooltip title="Ver detalles">
-                <IconButton
-                  size="small"
-                  onClick={() => onView(analisis.id)}
-                  color="primary"
-                >
-                  <Visibility />
-                </IconButton>
-              </Tooltip>
-            )}
-            {onDownload && analisis.estado === 'completado' && (
-              <Tooltip title="Descargar resultados">
-                <IconButton
-                  size="small"
-                  onClick={() => onDownload(analisis.id)}
-                  color="secondary"
-                >
-                  <Download />
-                </IconButton>
-              </Tooltip>
-            )}
-          </Box>
-        }
+        sx={{ pb: 0 }}
       />
-      <CardContent sx={{ flexGrow: 1 }}>
+      <CardContent sx={{ flexGrow: 1, pt: 0 }}>
         <Box mb={2}>
           <Chip
             label={getTipoAnalisisLabel(analisis.tipo_analisis)}
@@ -189,13 +165,43 @@ const AnalisisCard: React.FC<AnalisisCardProps> = ({
           </Box>
         )}
 
-        <Box display="flex" justifyContent="space-between" alignItems="center">
+        <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
           <Typography variant="body2" color="text.secondary">
             Tiempo: {formatTiempo(analisis.tiempo_total_ms)}
           </Typography>
           <Typography variant="caption" color="text.secondary">
             {dayjs(analisis.timestamp_captura).format('HH:mm:ss')}
           </Typography>
+        </Box>
+
+        {/* Botones de acción siempre visibles */}
+        <Box display="flex" gap={1} justifyContent="flex-end">
+          {onView && (
+            <Tooltip title="Ver detalles">
+              <Button
+                variant="outlined"
+                size="small"
+                startIcon={<Visibility />}
+                onClick={() => onView(analisis.id)}
+                color="primary"
+              >
+                Ver
+              </Button>
+            </Tooltip>
+          )}
+          {onDownload && analisis.estado === 'completado' && (
+            <Tooltip title="Descargar imagen procesada">
+              <Button
+                variant="outlined"
+                size="small"
+                startIcon={<Download />}
+                onClick={() => onDownload(analisis.id)}
+                color="secondary"
+              >
+                Descargar
+              </Button>
+            </Tooltip>
+          )}
         </Box>
       </CardContent>
     </Card>

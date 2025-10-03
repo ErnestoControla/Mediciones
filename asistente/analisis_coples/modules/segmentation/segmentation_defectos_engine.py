@@ -339,27 +339,17 @@ class SegmentadorDefectosCoples:
                     cy = int((y1 + y2) / 2)
                     
                     # Generar máscara combinando coeficientes con prototipos
-                    print(f"   🎨 Intentando generar máscara para detección {i}...")
                     try:
-                        print(f"      📊 mask_coeff shape: {mask_coeff.shape}")
-                        print(f"      📊 mask_protos shape: {mask_protos.shape}")
-                        print(f"      📊 bbox: ({x1}, {y1}, {x2}, {y2})")
-                        
-                        # INTENTO 1: Copiar arrays para evitar problemas de ownership
-                        print(f"      🔄 Copiando arrays de ONNX...")
+                        # CRÍTICO: Copiar arrays de ONNX para evitar problemas de ownership de memoria
+                        # NumPy no toma ownership de arrays de ONNX Runtime, causando segfaults
                         mask_coeff_copy = np.array(mask_coeff, dtype=np.float32, copy=True)
                         mask_protos_copy = np.array(mask_protos, dtype=np.float32, copy=True)
                         
-                        print(f"      ✅ Arrays copiados")
-                        print(f"      🧪 Intentando generar máscara con prototipos...")
-                        
+                        # Generar máscara con prototipos
                         mask = self._generate_mask(mask_coeff_copy, mask_protos_copy, (x1, y1, x2, y2), (640, 640))
                         
-                        if mask is not None:
-                            mask_area = int(np.sum(mask > 0.5))
-                            print(f"      ✅ Máscara con prototipos generada: {mask.shape}, área: {mask_area}")
-                        else:
-                            print(f"      ⚠️  _generate_mask retornó None, usando fallback")
+                        if mask is None:
+                            # Fallback si _generate_mask falla
                             mask = np.zeros((640, 640), dtype=np.float32)
                             x1_int, y1_int, x2_int, y2_int = int(x1), int(y1), int(x2), int(y2)
                             mask[y1_int:y2_int, x1_int:x2_int] = 1.0

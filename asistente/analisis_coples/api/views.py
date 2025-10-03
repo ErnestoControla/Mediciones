@@ -5,10 +5,12 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from django.shortcuts import get_object_or_404
+from django.http import HttpResponse, FileResponse
 from django.db.models import Q
 from django.utils import timezone
 from datetime import datetime, timedelta
 import logging
+import os
 
 from ..models import ConfiguracionSistema, AnalisisCople
 from ..resultados_models import EstadisticasSistema
@@ -224,6 +226,50 @@ class AnalisisCopleViewSet(viewsets.ModelViewSet):
             logger.error(f"Error realizando análisis: {e}")
             return Response({
                 'error': f'Error realizando análisis: {str(e)}'
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    
+    @action(detail=True, methods=['get'], url_path='descargar-imagen')
+    def descargar_imagen(self, request, pk=None):
+        """Descargar imagen procesada de un análisis"""
+        try:
+            analisis = self.get_object()
+            
+            if not analisis.archivo_imagen:
+                return Response({
+                    'error': 'No hay imagen procesada disponible'
+                }, status=status.HTTP_404_NOT_FOUND)
+            
+            # Abrir y servir el archivo con headers de descarga
+            try:
+                imagen_path = analisis.archivo_imagen.path
+                
+                if not os.path.exists(imagen_path):
+                    return Response({
+                        'error': 'El archivo de imagen no existe en el sistema'
+                    }, status=status.HTTP_404_NOT_FOUND)
+                
+                # Crear response con FileResponse para forzar descarga
+                response = FileResponse(
+                    open(imagen_path, 'rb'),
+                    content_type='image/jpeg'
+                )
+                
+                # Header para forzar descarga en lugar de mostrar
+                filename = f"analisis_{analisis.id_analisis}_procesado.jpg"
+                response['Content-Disposition'] = f'attachment; filename="{filename}"'
+                
+                return response
+                
+            except Exception as e:
+                logger.error(f"Error abriendo imagen: {e}")
+                return Response({
+                    'error': f'Error accediendo al archivo: {str(e)}'
+                }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            
+        except Exception as e:
+            logger.error(f"Error descargando imagen: {e}")
+            return Response({
+                'error': f'Error: {str(e)}'
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     
     @action(detail=True, methods=['get'], permission_classes=[AllowAny])

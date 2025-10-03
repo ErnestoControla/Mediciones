@@ -46,40 +46,16 @@ const AnalisisCoples: React.FC = () => {
 
   const handleDescargarAnalisis = async (id: number) => {
     try {
-      // Obtener el análisis para conseguir la URL de la imagen procesada
-      const analisis = await analisisAPI.getAnalisisById(id);
+      // Usar el endpoint de descarga que fuerza el download con Content-Disposition
+      const downloadUrl = `http://localhost:8000/api/analisis/resultados/${id}/descargar-imagen/`;
       
-      if (!analisis.imagen_procesada_url) {
-        Swal.fire('Error', 'No hay imagen procesada disponible para este análisis', 'error');
-        return;
-      }
-
-      // Usar fetch directamente con la URL completa (evita problemas con baseURL de axios)
-      const response = await fetch(analisis.imagen_procesada_url);
-      
-      if (!response.ok) {
-        throw new Error(`Error al descargar: ${response.status} ${response.statusText}`);
-      }
-      
-      const blob = await response.blob();
-      
-      // Crear blob URL para descarga
-      const blobUrl = window.URL.createObjectURL(blob);
-      
-      // Crear elemento <a> temporal para descargar
-      const link = document.createElement('a');
-      link.href = blobUrl;
-      link.download = `analisis_${analisis.id_analisis}_procesado.jpg`;
-      document.body.appendChild(link);
-      link.click();
-      
-      // Limpiar
-      document.body.removeChild(link);
-      window.URL.revokeObjectURL(blobUrl);
+      // Abrir directamente en nueva ventana para descargar
+      // El backend enviará headers que fuerzan la descarga
+      window.open(downloadUrl, '_blank');
 
       Swal.fire({
-        title: '✅ Descarga Completada',
-        text: 'La imagen procesada se ha descargado',
+        title: '✅ Descarga Iniciada',
+        text: 'La imagen procesada se está descargando',
         icon: 'success',
         timer: 2000,
         showConfirmButton: false

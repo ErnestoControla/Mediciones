@@ -220,6 +220,7 @@ const DetalleAnalisis: React.FC = () => {
                         <TableCell>Clase</TableCell>
                         <TableCell>Confianza</TableCell>
                         <TableCell>BBox (px)</TableCell>
+                        <TableCell>Máscara (px)</TableCell>
                         <TableCell>Área Máscara (px²)</TableCell>
                         <TableCell>Perímetro (px)</TableCell>
                         <TableCell>Excentricidad</TableCell>
@@ -234,6 +235,9 @@ const DetalleAnalisis: React.FC = () => {
                           </TableCell>
                           <TableCell>
                             {pieza.mediciones_px?.ancho_bbox} x {pieza.mediciones_px?.alto_bbox}
+                          </TableCell>
+                          <TableCell>
+                            {pieza.mediciones_px?.ancho_mascara} x {pieza.mediciones_px?.alto_mascara}
                           </TableCell>
                           <TableCell>{pieza.mediciones_px?.area}</TableCell>
                           <TableCell>{pieza.mediciones_px?.perimetro}</TableCell>
@@ -262,6 +266,7 @@ const DetalleAnalisis: React.FC = () => {
                         <TableCell>Clase</TableCell>
                         <TableCell>Confianza</TableCell>
                         <TableCell>BBox (px)</TableCell>
+                        <TableCell>Máscara (px)</TableCell>
                         <TableCell>Área Máscara (px²)</TableCell>
                         <TableCell>Perímetro (px)</TableCell>
                         <TableCell>Excentricidad</TableCell>
@@ -276,6 +281,9 @@ const DetalleAnalisis: React.FC = () => {
                           </TableCell>
                           <TableCell>
                             {defecto.mediciones_px?.ancho_bbox} x {defecto.mediciones_px?.alto_bbox}
+                          </TableCell>
+                          <TableCell>
+                            {defecto.mediciones_px?.ancho_mascara} x {defecto.mediciones_px?.alto_mascara}
                           </TableCell>
                           <TableCell>{defecto.mediciones_px?.area}</TableCell>
                           <TableCell>{defecto.mediciones_px?.perimetro}</TableCell>

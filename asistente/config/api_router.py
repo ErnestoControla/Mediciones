@@ -14,7 +14,8 @@ from analisis_coples.api.views import (
     ConfiguracionSistemaViewSet,
     AnalisisCopleViewSet,
     EstadisticasSistemaViewSet,
-    SistemaControlViewSet
+    SistemaControlViewSet,
+    RutinaInspeccionViewSet
 )
 from analisis_coples.api import image_views
 from analisis_coples.api.camera_views import CamaraControlViewSet
@@ -31,6 +32,7 @@ router.register(r"analisis/configuraciones", ConfiguracionSistemaViewSet, basena
 router.register(r"analisis/resultados", AnalisisCopleViewSet, basename="analisis")
 router.register(r"analisis/estadisticas", EstadisticasSistemaViewSet, basename="estadisticas")
 router.register(r"analisis/sistema", SistemaControlViewSet, basename="sistema")
+router.register(r"analisis/rutinas", RutinaInspeccionViewSet, basename="rutinas")
 
 # API de control de cámara
 router.register(r"camara", CamaraControlViewSet, basename="camara")

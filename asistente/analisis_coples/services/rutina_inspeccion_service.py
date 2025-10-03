@@ -330,9 +330,13 @@ class RutinaInspeccionService:
                 metadatos_json={}
             )
             
-            # Ejecutar segmentación
+            # Ejecutar segmentación con máscaras SIMPLES (estable para rutinas)
+            logger.info(f"   🎯 Usando máscaras rectangulares simples (modo rutina, 100% estable)")
             inicio_seg = time.time()
-            segmentaciones = self.segmentation_service.segmentador_defectos.segmentar(imagen)
+            segmentaciones = self.segmentation_service.segmentador_defectos.segmentar(
+                imagen, 
+                usar_mascaras_simples=True  # Forzar máscaras simples para rutinas
+            )
             tiempo_seg = (time.time() - inicio_seg) * 1000
             analisis_db.tiempo_segmentacion_defectos_ms = tiempo_seg
             

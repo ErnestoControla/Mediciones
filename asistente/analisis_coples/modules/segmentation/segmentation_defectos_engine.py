@@ -173,16 +173,18 @@ class SegmentadorDefectosCoples:
             print(f"⚠️ Usando imagen de fallback: {fallback.shape}")
             return fallback
     
-    def segmentar_defectos(self, imagen: np.ndarray) -> List[Dict]:
+    def segmentar_defectos(self, imagen: np.ndarray, usar_mascaras_simples: bool = False) -> List[Dict]:
         """
         Segmenta defectos en la imagen
         
         Args:
             imagen: Imagen RGB de entrada (H, W, C)
+            usar_mascaras_simples: Si True, usa máscaras rectangulares simples (más estable para rutinas)
             
         Returns:
             Lista de segmentaciones con máscaras, clase y confianza
         """
+        self.usar_mascaras_simples = usar_mascaras_simples
         try:
             # Debug: Mostrar tamaño de imagen original
             print(f"🔍 Debug imagen segmentación - Original: {imagen.shape}")
@@ -242,18 +244,19 @@ class SegmentadorDefectosCoples:
             print(f"❌ Error en segmentación de defectos: {e}")
             return []
     
-    def segmentar(self, imagen: np.ndarray) -> List[Dict]:
+    def segmentar(self, imagen: np.ndarray, usar_mascaras_simples: bool = False) -> List[Dict]:
         """
         Método de compatibilidad con el sistema integrado.
         Alias para segmentar_defectos.
         
         Args:
             imagen (np.ndarray): Imagen de entrada (BGR)
+            usar_mascaras_simples (bool): Si True, usa máscaras rectangulares (más estable para rutinas)
             
         Returns:
             List[Dict]: Lista de segmentaciones detectadas
         """
-        return self.segmentar_defectos(imagen)
+        return self.segmentar_defectos(imagen, usar_mascaras_simples=usar_mascaras_simples)
     
     def _procesar_salidas_segmentacion(self, outputs):
         """
@@ -339,31 +342,39 @@ class SegmentadorDefectosCoples:
                     cx = int((x1 + x2) / 2)
                     cy = int((y1 + y2) / 2)
                     
-                    # Generar máscara combinando coeficientes con prototipos
-                    try:
-                        # CRÍTICO: Copiar arrays de ONNX para evitar problemas de ownership de memoria
-                        # NumPy no toma ownership de arrays de ONNX Runtime, causando segfaults
-                        mask_coeff_copy = np.array(mask_coeff, dtype=np.float32, copy=True)
-                        mask_protos_copy = np.array(mask_protos, dtype=np.float32, copy=True)
-                        
-                        # Generar máscara con prototipos
-                        mask = self._generate_mask(mask_coeff_copy, mask_protos_copy, (x1, y1, x2, y2), (640, 640))
-                        
-                        if mask is None:
-                            # Fallback si _generate_mask falla
-                            mask = np.zeros((640, 640), dtype=np.float32)
-                            x1_int, y1_int, x2_int, y2_int = int(x1), int(y1), int(x2), int(y2)
-                            mask[y1_int:y2_int, x1_int:x2_int] = 1.0
-                        
-                    except Exception as e:
-                        print(f"   ⚠️  Error generando máscara: {e}")
-                        import traceback
-                        traceback.print_exc()
-                        
-                        # Fallback: máscara simple
+                    # Generar máscara (simple o con prototipos según configuración)
+                    if self.usar_mascaras_simples:
+                        # Máscara rectangular simple (100% estable, para rutinas)
+                        print(f"   🟥 Usando máscara rectangular simple (modo rutina)")
                         mask = np.zeros((640, 640), dtype=np.float32)
                         x1_int, y1_int, x2_int, y2_int = int(x1), int(y1), int(x2), int(y2)
                         mask[y1_int:y2_int, x1_int:x2_int] = 1.0
+                    else:
+                        # Máscara con prototipos YOLO11 (precisa, para análisis individuales)
+                        try:
+                            # CRÍTICO: Copiar arrays de ONNX para evitar problemas de ownership de memoria
+                            # NumPy no toma ownership de arrays de ONNX Runtime, causando segfaults
+                            mask_coeff_copy = np.array(mask_coeff, dtype=np.float32, copy=True)
+                            mask_protos_copy = np.array(mask_protos, dtype=np.float32, copy=True)
+                            
+                            # Generar máscara con prototipos
+                            mask = self._generate_mask(mask_coeff_copy, mask_protos_copy, (x1, y1, x2, y2), (640, 640))
+                            
+                            if mask is None:
+                                # Fallback si _generate_mask falla
+                                mask = np.zeros((640, 640), dtype=np.float32)
+                                x1_int, y1_int, x2_int, y2_int = int(x1), int(y1), int(x2), int(y2)
+                                mask[y1_int:y2_int, x1_int:x2_int] = 1.0
+                            
+                        except Exception as e:
+                            print(f"   ⚠️  Error generando máscara: {e}")
+                            import traceback
+                            traceback.print_exc()
+                            
+                            # Fallback: máscara simple
+                            mask = np.zeros((640, 640), dtype=np.float32)
+                            x1_int, y1_int, x2_int, y2_int = int(x1), int(y1), int(x2), int(y2)
+                            mask[y1_int:y2_int, x1_int:x2_int] = 1.0
                     
                     # Calcular área de la máscara (siempre, independientemente del método usado)
                     mask_area = int(np.sum(mask > 0.5))

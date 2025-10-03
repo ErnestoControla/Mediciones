@@ -44,7 +44,8 @@ class RutinaInspeccionService:
         """Inicializa el servicio"""
         self.segmentation_service = get_segmentation_analysis_service()
         self.num_angulos = 6  # Número de ángulos a capturar
-        self.delay_entre_capturas = 5  # Segundos entre capturas (aumentado para prevenir segfaults)
+        self.delay_entre_capturas = 2  # Segundos entre capturas (solo captura, sin ONNX)
+        self.delay_entre_analisis = 10  # Segundos entre análisis (liberar memoria de ONNX)
     
     def iniciar_rutina(
         self,
@@ -129,8 +130,10 @@ class RutinaInspeccionService:
             logger.info(f"   FASE 1: Capturar {self.num_angulos} imágenes con {self.delay_entre_capturas}s entre cada una")
             logger.info(f"   FASE 2: Analizar las {self.num_angulos} imágenes guardadas")
             
-            # FASE 1: CAPTURA DE IMÁGENES
-            imagenes_capturadas = []
+            # FASE 1: CAPTURA DE IMÁGENES (guardar en disco, no RAM)
+            imagenes_paths = []
+            temp_dir = os.path.join(settings.MEDIA_ROOT, 'temp_rutinas', rutina.id_rutina)
+            os.makedirs(temp_dir, exist_ok=True)
             
             for angulo in range(1, self.num_angulos + 1):
                 logger.info(f"\n📸 FASE 1 - Capturando imagen {angulo}/{self.num_angulos}...")
@@ -147,10 +150,14 @@ class RutinaInspeccionService:
                     logger.error(f"❌ Error capturando imagen en ángulo {angulo}")
                     continue
                 
-                # Guardar imagen temporalmente
-                imagenes_capturadas.append({
+                # Guardar imagen en disco (libera RAM inmediatamente)
+                filename = f"angulo_{angulo}.jpg"
+                filepath = os.path.join(temp_dir, filename)
+                cv2.imwrite(filepath, imagen)
+                
+                imagenes_paths.append({
                     'angulo': angulo,
-                    'imagen': imagen.copy(),  # Copiar para evitar referencias
+                    'filepath': filepath,
                     'timestamp': timezone.now()
                 })
                 
@@ -158,24 +165,31 @@ class RutinaInspeccionService:
                 rutina.num_imagenes_capturadas = angulo
                 rutina.save()
                 
-                logger.info(f"✅ Imagen {angulo} capturada: {imagen.shape}")
+                logger.info(f"✅ Imagen {angulo} guardada en disco: {filename}")
                 
-                # Esperar antes de la siguiente captura
+                # Esperar antes de la siguiente captura (delay corto, solo captura)
                 if angulo < self.num_angulos:
                     logger.info(f"⏳ Esperando {self.delay_entre_capturas}s...")
                     time.sleep(self.delay_entre_capturas)
             
-            logger.info(f"\n✅ FASE 1 COMPLETADA: {len(imagenes_capturadas)} imágenes capturadas")
+            logger.info(f"\n✅ FASE 1 COMPLETADA: {len(imagenes_paths)} imágenes guardadas en disco")
             
-            # FASE 2: ANÁLISIS DE IMÁGENES
-            logger.info(f"\n🔍 FASE 2 - Analizando {len(imagenes_capturadas)} imágenes...")
+            # FASE 2: ANÁLISIS DE IMÁGENES (desde disco, con delay largo)
+            logger.info(f"\n🔍 FASE 2 - Analizando {len(imagenes_paths)} imágenes desde disco...")
+            logger.info(f"   Delay entre análisis: {self.delay_entre_analisis}s (liberar memoria ONNX)")
             analisis_ids = []
             
-            for idx, imagen_data in enumerate(imagenes_capturadas):
+            for idx, imagen_data in enumerate(imagenes_paths):
                 angulo = imagen_data['angulo']
-                imagen = imagen_data['imagen']
+                filepath = imagen_data['filepath']
                 
-                logger.info(f"\n🔬 Analizando imagen {idx + 1}/{len(imagenes_capturadas)} (Ángulo {angulo})...")
+                logger.info(f"\n🔬 Analizando imagen {idx + 1}/{len(imagenes_paths)} (Ángulo {angulo})...")
+                
+                # Leer imagen desde disco
+                imagen = cv2.imread(filepath)
+                if imagen is None:
+                    logger.error(f"❌ Error leyendo imagen desde {filepath}")
+                    continue
                 
                 # Analizar imagen (crea análisis en BD)
                 resultado = self._analizar_imagen_guardada(
@@ -192,12 +206,27 @@ class RutinaInspeccionService:
                 analisis_ids.append(resultado['analisis_id'])
                 logger.info(f"✅ Ángulo {angulo} analizado: {resultado['id_analisis']}")
                 
-                # Liberar segmentador entre análisis
+                # Liberar segmentador y esperar antes del siguiente análisis
                 if self.segmentation_service.segmentador_defectos:
+                    logger.info(f"🧹 Liberando segmentador...")
                     del self.segmentation_service.segmentador_defectos
                     self.segmentation_service.segmentador_defectos = None
                     import gc
                     gc.collect()
+                    logger.info(f"✅ Memoria liberada")
+                
+                # Delay largo entre análisis para dar tiempo a liberar memoria ONNX
+                if idx < len(imagenes_paths) - 1:
+                    logger.info(f"⏳ Esperando {self.delay_entre_analisis}s antes del siguiente análisis...")
+                    time.sleep(self.delay_entre_analisis)
+            
+            # Limpiar archivos temporales
+            try:
+                import shutil
+                shutil.rmtree(temp_dir)
+                logger.info(f"🗑️  Imágenes temporales eliminadas: {temp_dir}")
+            except Exception as e:
+                logger.warning(f"⚠️  No se pudieron eliminar archivos temporales: {e}")
             
             logger.info(f"\n✅ FASE 2 COMPLETADA: {len(analisis_ids)} imágenes analizadas")
             logger.info(f"\n✅ Barrido total completado: {len(analisis_ids)} ángulos exitosos")
@@ -282,11 +311,24 @@ class RutinaInspeccionService:
                 imagen, segmentaciones, 'medicion_defectos'
             )
             
-            # Guardar imagen procesada
+            # Guardar imagen procesada (inline, igual que en segmentation_analysis_service)
             if imagen_procesada is not None:
-                self.segmentation_service._guardar_imagen_procesada(
-                    analisis_db, imagen_procesada
-                )
+                try:
+                    from django.core.files.base import ContentFile
+                    
+                    # Codificar imagen
+                    _, buffer = cv2.imencode('.jpg', imagen_procesada)
+                    imagen_bytes = buffer.tobytes()
+                    
+                    # Nombre del archivo
+                    nombre_archivo = f"analisis_{id_analisis}.jpg"
+                    
+                    # Guardar usando ContentFile
+                    analisis_db.archivo_imagen = ContentFile(imagen_bytes, name=nombre_archivo)
+                    logger.info(f"💾 Imagen procesada guardada: {nombre_archivo}")
+                    
+                except Exception as e:
+                    logger.error(f"❌ Error guardando imagen procesada: {e}", exc_info=True)
             
             # Finalizar
             analisis_db.tiempo_total_ms = tiempo_seg
